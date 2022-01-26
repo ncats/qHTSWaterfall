@@ -8,7 +8,11 @@ Authors@R:
     person(given = "Bryan",
            family = "Queme",
            role = c("aut", "cre"),
-           email = "bryan.queme@nih.gov")
+           email = "bryan.queme@nih.gov"),
+    person(given = "John",
+           family = "Braisted",
+           role = c("aut", "cre"),
+           email = "john.braisted@nih.gov")
 Description: Plots 3D qHTS waterfall plot, given Pubchem activity file or NCATS qHTS format file.
 Imports:
   rlang,
