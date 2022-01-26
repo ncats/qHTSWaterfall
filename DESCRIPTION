@@ -1,0 +1,22 @@
+Package: qHTSWaterfall
+Title: qHTS Waterfall Plots
+Type: Package
+Version: 1.0.1
+License: use_apache_license()
+Depends: R (>= 3.6.0)
+Authors@R: 
+    person(given = "Bryan",
+           family = "Queme",
+           role = c("aut", "cre"),
+           email = "bryan.queme@nih.gov")
+Description: Plots 3D qHTS waterfall plot, given Pubchem activity file or NCATS qHTS format file.
+Imports:
+  rlang,
+  rgl,
+  stringr,
+  dplyr,
+  tidyr
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
