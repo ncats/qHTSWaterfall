@@ -29,11 +29,66 @@
 #' @param curveColors color list for activity readout \emph{\bold{fitted dose-response curves}}. The order should match the activityReadoutsList order.
 #' @param inactiveColor color to display inactive data, default is 'gray'.
 #' @param alpha alpha transparency of the the plot lines, default is 1.0
+#' @param pointSize relative size of plotted points, default = 2
+#' @param plotInactivePoints TRUE will plot inactive data as datapoints, FALSE Will hide inactive data.
+#' @param curveResolution value between 25 and 250, number of points to define dose-response curves. Fewer points renders as connected straight lines.
+#' @param plotAspectRatio relative sizes of concentration axis (x), response axis (y), and waterfall width (z). Input as list, derault: c(1, 1, 3)
+#' @importFrom utils read.csv
+#' @import rgl
+#' @import stringr
+#' @import dplyr
+#' @import tidyr
 #' @examples
 #' \dontrun{
-#' plotWaterfall(inputFile="./data/NCATS_CMT1A_PMP22_Follow_Up.csv", activityReadouts=c("Active", "Nluc100"))
+#'
+#' # specify sample data file
+#' filePath <- system.file("extdata", "NCATS_CMT1A_PMP22_Follow_Up.csv", package="qHTSWaterfall")
+#'
+#' # supply log molar concentrations (for non-PubChem data only)
+#' logConc <- c(
+#'  -9.011761791,
+#'  -8.534640544,
+#'  -8.057519287,
+#'  -7.580398031,
+#'  -7.103276777,
+#'  -6.626155522,
+#'  -6.149034267,
+#'  -5.671913012,
+#'  -5.194791758,
+#'  -4.717670503,
+#'  -4.240549248
+#')
+#'
+#' # make plotting call with desired parameter settings
+#' # 3D Plot will be presented in a separate window.
+#' plotWaterfall(
+#'   inputFile=filePath,
+#'   activityReadouts = c("fluc", "nluc"),
+#'   logMolarConcVector = logConc,
+#'   pointColors = c("darkgreen", "royalblue3"),
+#'   curveColors = c("darkgreen", "royalblue3"),
+#'   inactiveColor = "gray",
+#'   pointSize = 3,
+#'   alpha = 1,
+#'   plotInactivePoints = F,
+#'   curveResolution = 100,
+#'   plotAspectRatio = c(2,2,5)
+#'   )
 #' }
-plotWaterfallEarlyVersion <- function(inputFile, activityReadouts = c('Activity'), logMolarConcVector, pointColors=c('darkgreen','royalblue3'), curveColors=c('darkgreen', 'royalblue3'), inactiveColor='gray', alpha=1) {
+#' @export
+plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarConcVector,
+                           pointColors=c('darkgreen','royalblue3'), curveColors=c('darkgreen', 'royalblue3'),
+                           inactiveColor='gray', alpha=1, pointSize=2.0, plotInactivePoints=T, curveResolution=25, plotAspectRatio=c(1,1,3)) {
+
+  ## Put in checks
+
+  #activity readouts, should have an equal or greater numbrer of point and curve colors
+
+  if(curveResolution < 25) {
+    curveResolution = 25
+  } else if(curveResolution > 250) {
+    curveResolution = 250
+  }
 
   #Important settings
   keyword_1 <- "Active"
@@ -41,14 +96,15 @@ plotWaterfallEarlyVersion <- function(inputFile, activityReadouts = c('Activity'
   keyReadouts <- activityReadouts
   alpha_1 <- alpha
 
+  conc = logMolarConcVector
   #Color of points in graph ------------------------------------------------------
-  pointColors = pointColors
-  lineColors <- curveColors
+  pointColors <- c(pointColors, inactiveColor)
+  lineColors <- c(curveColors, inactiveColor)
 
-  col_1 <- c(pointColors[1]) #active points
-  col_2 <- c(pointColors[2])   # noise  or non-actives
-  col_3 <- c(curveColors[1])   #keyword_1 curve color
-  col_4 <- c(curveColors[2]) #keyword_2 curve color
+  #col_1 <- c(pointColors[1]) #active points
+  #col_2 <- c(pointColors[2])   # noise  or non-actives
+  #col_3 <- c(curveColors[1])   #keyword_1 curve color
+  #col_4 <- c(curveColors[2]) #keyword_2 curve color
   # all R colors can be found at http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf
 
   #Asking to select file ---------------------------------------------------------
@@ -112,7 +168,7 @@ plotWaterfallEarlyVersion <- function(inputFile, activityReadouts = c('Activity'
     #converting to numeric
     x <- as.numeric(x)
 
-  }else{
+  } else {
     cdata <- read.csv(ifile, header=TRUE, na.string="null")
     #matching variable names
     fit <- "Fit_Output"
@@ -144,15 +200,24 @@ plotWaterfallEarlyVersion <- function(inputFile, activityReadouts = c('Activity'
                         "dM" = log(x[i]*1e-01),
                         "fM" = log(x[i]*1e-15))
     }
-  }else{ #please INPUT your concentration here if the data is NOT from PubChem
-    conc <- c(
-      -9.231,
-      -9.11,
-      -8,
-      -7,
-      -6,
-      -5,
-      -4)
+  }else{
+    # verify that we have conc values, if not issue warning and request that conc be supplied.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   }
 
   conc <- format(round(conc, 2), nsmall = 2)
@@ -167,7 +232,7 @@ plotWaterfallEarlyVersion <- function(inputFile, activityReadouts = c('Activity'
     l <- nrow(cdata)
     for (i in 1:l){
       if(cdata[i,readout] %in% keyReadouts) {
-      #if(cdata[i,readout]==keyword_1 || cdata[i,readout]==keyword_2){
+        #if(cdata[i,readout]==keyword_1 || cdata[i,readout]==keyword_2){
         cdata[i,fit] = 1
       }else{
         cdata[i,fit] = 0
@@ -184,7 +249,7 @@ plotWaterfallEarlyVersion <- function(inputFile, activityReadouts = c('Activity'
     for(i in 1:titrations){
       dataCols[i] <- c(paste("Data",(i-1), sep=""))
     }
-    cdata_points <- cdata[,c(readout,dataCols)]
+    cdata_points <- cdata[,c(fit, readout, dataCols)]
     cdata_curves <- cdata[,c(fit, readout, lac50, hill, inf, zero)]
   }
 
@@ -197,14 +262,15 @@ plotWaterfallEarlyVersion <- function(inputFile, activityReadouts = c('Activity'
   for(i in 1:l){
     cdata_points$z[i] <- i
   }
-  colnames(cdata_points) <- c("readout", conc, "z")
+  colnames(cdata_points) <- c("Fit_Output", "readout", conc, "z")
 
   l <- length(colnames(cdata_points))
-  mainMatrix <- tidyr::pivot_longer(cdata_points, cols = 2:(l-1), names_to = "x", values_to = "y")
+
+  mainMatrix <- tidyr::pivot_longer(cdata_points, cols = 3:(l-1), names_to = "x", values_to = "y")
 
   #mainMatrix <- tidyr::pivot_longer(cdata_points, cols = 2:(l-1), names_to = c("x","z"), names_pattern = "(.)(.)", values_to = "y")
 
-myMain <- mainMatrix
+  myMain <- mainMatrix
   #correcting data type-----------------------------------------------------------
 
   mainMatrix$x <- as.double(mainMatrix$x)
@@ -213,22 +279,47 @@ myMain <- mainMatrix
 
   waterfall_POINTS_data <- mainMatrix
 
-  #separating the data------------------------------------------------------------
-  waterfall_POINTS_data_1 <- data.frame(x=double(), y=double(), z=double())
-  waterfall_POINTS_data_2 <- data.frame(x=double(), y=double(), z=double())
+  #separating the data by sampel data type (readout)------------------------------------------------------------
+
+  #hold the ploted points in here
+  waterfallPoints = list()
+  for(readout in keyReadouts) {
+    waterfallPoints[[readout]] = data.frame(x=double(), y=double(), z=double())
+  }
+  if(plotInactivePoints) {
+    waterfallPoints[['inactive']] = data.frame(x=double(), y=double(), z=double())
+  }
+  # hold teh plotted lines, curve fits in here, only need to handle actives, with plot = 0
+  waterfallLines = list()
+  for(readout in keyReadouts) {
+    waterfallLines[[readout]] = data.frame(x=double(), y=double(), z=double())
+  }
+
+
+  # waterfall_POINTS_data_1 <- data.frame(x=double(), y=double(), z=double())
+  # waterfall_POINTS_data_2 <- data.frame(x=double(), y=double(), z=double())
 
   l <- nrow(waterfall_POINTS_data)
   for(i in 1:l){
 
-    if(waterfall_POINTS_data$readout[i] %in% keyReadouts) {
-    #if(waterfall_POINTS_data$readout[i] == keyword_1 || waterfall_POINTS_data$readout[i] == keyword_2) {
-      waterfall_POINTS_data_1 <- dplyr::bind_rows(waterfall_POINTS_data_1, data.frame(x=waterfall_POINTS_data$x[i],
-                                                                               y=waterfall_POINTS_data$y[i],
-                                                                               z=waterfall_POINTS_data$z[i]))
-    }else{
-      waterfall_POINTS_data_2 <- dplyr::bind_rows(waterfall_POINTS_data_2, data.frame(x=waterfall_POINTS_data$x[i],
-                                                                               y=waterfall_POINTS_data$y[i],
-                                                                               z=waterfall_POINTS_data$z[i]))
+    readout <- waterfall_POINTS_data$readout[i]
+    showFit <- waterfall_POINTS_data$Fit_Output[i]
+
+    if(readout %in% keyReadouts && showFit == 1) {
+      #if(waterfall_POINTS_data$readout[i] == keyword_1 || waterfall_POINTS_data$readout[i] == keyword_2) {
+      wfData <- waterfallPoints[[readout]]
+
+      wfData <- dplyr::bind_rows(wfData, data.frame(x=waterfall_POINTS_data$x[i],
+                                                    y=waterfall_POINTS_data$y[i],
+                                                    z=waterfall_POINTS_data$z[i]))
+      waterfallPoints[[readout]] <- wfData
+    } else if(plotInactivePoints) {
+
+      wfDataInactive = waterfallPoints[['inactive']]
+      wfDataInactive <- dplyr::bind_rows(wfDataInactive, data.frame(x=waterfall_POINTS_data$x[i],
+                                                                    y=waterfall_POINTS_data$y[i],
+                                                                    z=waterfall_POINTS_data$z[i]))
+      waterfallPoints[['inactive']] <- wfDataInactive
     }
 
   }
@@ -244,7 +335,7 @@ myMain <- mainMatrix
   }
 
   f <- function(params, concs, interleave=TRUE) {
-    xx <- seq(min(concs), max(concs), length=25)
+    xx <- seq(min(concs), max(concs), length=curveResolution)
     yy <- with(params, ZERO + (INF-ZERO)/(1 + 10^((LAC50-xx)*HILL)))
     return(data.frame(x=xx, y=yy))
   }
@@ -256,26 +347,50 @@ myMain <- mainMatrix
   l <- nrow(cdata_curves)
   for (i in 1:l) {
 
-    if(cdata_curves[i,"Fit_Output"]==1 && cdata_curves[i,"readout"] %in% keyReadouts) {
+    readout = cdata_curves[i,"readout"]
 
-#    if(cdata_curves[i,"Fit_Output"]==1 && cdata_curves[i,"readout"]==keyword_1) {
+    if(cdata_curves[i,"Fit_Output"]==1 && readout %in% keyReadouts) {
+
+      wfLines <- waterfallLines[[readout]]
+
+      #    if(cdata_curves[i,"Fit_Output"]==1 && cdata_curves[i,"readout"]==keyword_1) {
       rowIndex = rowIndex+1
       d1 <- data.frame(f(cdata_curves[i,], c(lowerBound, upperBound)), z=i)
 
       #add multiple rows
-      mainMatrix <- dplyr::bind_rows(mainMatrix, data.frame(x=d1[,1], z=i, y=d1[,2]))
+      wfLines <- dplyr::bind_rows(wfLines, data.frame(x=d1[,1], z=i, y=d1[,2]))
       #needed for break mechanic when graphing
-      mainMatrix <- dplyr::bind_rows(mainMatrix, data.frame(x=NA, z=NA, y=1))
-
+      wfLines <- dplyr::bind_rows(wfLines, data.frame(x=NA, z=NA, y=1))
+      waterfallLines[[readout]] <- wfLines
     }
   }
 
-  #correcting data type if needed
-  mainMatrix$x <- as.double(mainMatrix$x)
-  mainMatrix$y <- as.double(mainMatrix$y)
-  mainMatrix$z <- as.double(mainMatrix$z)
+  # verify numeric data
+  for(i in 1:length(waterfallPoints)) {
+    m <- waterfallPoints[[i]]
+    m$x <- as.double(m$x)
+    m$y <- as.double(m$y)
+    m$z <- as.double(m$z)
+    waterfallPoints[[i]] <- m
+  }
 
-  waterfall_LINES_data_1 <- mainMatrix
+  for(i in 1:length(waterfallLines)) {
+    m <- waterfallLines[[i]]
+    m$x <- as.double(m$x)
+    m$y <- as.double(m$y)
+    m$z <- as.double(m$z)
+    waterfallLines[[i]] <- m
+  }
+
+
+
+
+  #correcting data type if needed
+  # mainMatrix$x <- as.double(mainMatrix$x)
+  # mainMatrix$y <- as.double(mainMatrix$y)
+  # mainMatrix$z <- as.double(mainMatrix$z)
+  #
+  # waterfall_LINES_data_1 <- mainMatrix
 
   #recreating titration curves keyword_2------------------------------------------
   # mainMatrix <- data.frame(x=double(),y=double(),z=double())
@@ -295,11 +410,11 @@ myMain <- mainMatrix
   # }
 
   #correcting data type if needed
-  mainMatrix$x <- as.double(mainMatrix$x)
-  mainMatrix$y <- as.double(mainMatrix$y)
-  mainMatrix$z <- as.double(mainMatrix$z)
-
-  waterfall_LINES_data_2 <- mainMatrix
+  # mainMatrix$x <- as.double(mainMatrix$x)
+  # mainMatrix$y <- as.double(mainMatrix$y)
+  # mainMatrix$z <- as.double(mainMatrix$z)
+  #
+  # waterfall_LINES_data_2 <- mainMatrix
 
   #3D Graphing -------------------------------------------------------------------
 
@@ -318,49 +433,66 @@ myMain <- mainMatrix
   # col first then rows
 
   # Pop-up window size
-  newWindowRect = c(138, 161, 886, 760)
+  #newWindowRect = c(138, 161, 886, 760)
+
+  newWindowRect = c(138, 150, 1000, 820)
+
 
   #SCALING THE 3D WINDOW ---------------------------------------------------------
   #scale=c(concentration, %, #samples),  #
   rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect)
-
   #PLOTTING POINTS IN 3D GRAPH ---------------------------------------------------
-  for(i in waterfall_POINTS_data_1$x)
+  start = Sys.time()
+  totPointsProcessed = 0
+  for(i in 1:length(waterfallPoints))
   {
-    rgl::points3d(x=waterfall_POINTS_data_1$x[i], y = waterfall_POINTS_data_1$y[i],
-             z=waterfall_POINTS_data_1$z[i], col = col_1,
-             size = 2)
-    break
+    m <- waterfallPoints[[i]]
+    currentColor = pointColors[i]
+    rgl::points3d(x=m$x, y=m$y, z=m$z, col = currentColor, size = pointSize)
+    totPointsProcessed = totPointsProcessed + 1
   }
 
-  for(i in waterfall_POINTS_data_2$x)
-  {
-    rgl::points3d(x=waterfall_POINTS_data_2$x[i],y=waterfall_POINTS_data_2$y[i],
-             z=waterfall_POINTS_data_2$z[i], col = col_2,
-             size = 0.5)
-    break
-  }
+
+  # for(i in waterfall_POINTS_data_2$x)
+  # {
+  #   rgl::points3d(x=waterfall_POINTS_data_2$x[i],y=waterfall_POINTS_data_2$y[i],
+  #                 z=waterfall_POINTS_data_2$z[i], col = col_2,
+  #                 size = 0.5)
+  #   break
+  # }
 
   #PLOTTING LINES IN 3D GRAPH ----------------------------------------------------
-  for(i in waterfall_LINES_data_1$x)
+  # for(i in waterfall)
+  # {
+  #   rgl::lines3d(waterfall_LINES_data_1[i],col = col_3, alpha = alpha_1)
+  # }
+
+  for(i in 1:length(waterfallLines))
   {
-    rgl::lines3d(waterfall_LINES_data_1[i],col = col_3, alpha = alpha_1)
-    break
+    m <- waterfallLines[[i]]
+    currentColor = lineColors[i]
+    rgl::lines3d(x=m$x, y=m$y, z=m$z, col = currentColor, alpha=alpha_1, size=50)
   }
 
-  for(i in waterfall_LINES_data_2$x)
-  {
-    rgl::lines3d(waterfall_LINES_data_2[i],col = col_3, alpha = alpha_1)
-    break
-  }
+
+
+
+
+  # for(i in waterfall_LINES_data_2$x)
+  # {
+  #   rgl::lines3d(waterfall_LINES_data_2[i],col = col_3, alpha = alpha_1)
+  #   break
+  # }
 
   #CREATE BOX AROUND EDGES FOR THE GRAPH -----------------------------------------
   rgl::axes3d(expand = 1.03, box = FALSE, xunit = 'pretty', yunit = "pretty", zunit = 'pretty')
 
+  rgl::rgl.material(point_antialias = T, line_antialias = T)
+
   # Adding Grid lines
   rgl::grid3d(c("x","y","z+"))
 
-  rgl::aspect3d(1,1,3)
+  rgl::aspect3d(plotAspectRatio[1],plotAspectRatio[2],plotAspectRatio[3])
 
   return(myMain)
 

@@ -2,7 +2,7 @@ Package: qHTSWaterfall
 Title: qHTS Waterfall Plots
 Type: Package
 Version: 1.0.1
-License: use_apache_license()
+License: Apache License (>= 2)
 Depends: R (>= 3.6.0)
 Authors@R: 
     person(given = "Bryan",
@@ -16,6 +16,7 @@ Authors@R:
 Description: Plots 3D qHTS waterfall plot, given Pubchem activity file or NCATS qHTS format file.
 Imports:
   rlang,
+  utils,
   rgl,
   stringr,
   dplyr,
