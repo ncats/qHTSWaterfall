@@ -30,22 +30,40 @@
 #' @param inactiveColor color to display inactive data, default is 'gray'.
 #' @param alpha alpha transparency of the the plot lines, default is 1.0
 #' @param pointSize relative size of plotted points, default = 2
+#' @param plotInactivePoints TRUE will plot inactive data as datapoints, FALSE Will hide inactive data.
+#' @param curveResolution value between 25 and 250, number of points to define dose-response curves. Fewer points renders as connected straight lines.
+#' @param plotAspectRatio relative sizes of concentration axis (x), response axis (y), and waterfall width (z). Input as list, derault: c(1, 1, 3)
 #' @examples
 #' \dontrun{
-#' plotWaterfall2(inputFile="./data/NCATS_qHTS_NPAC_Genesis_F1.csv", activityReadouts=c("Active", "Nluc100"))
+#' file = "./data/NCATS_CMT1A_PMP22_Follow_Up.csv"
+#' plotWaterfall(
+#'   inputFile=file,
+#'   activityReadouts = c("fluc", "nluc"),
+#'   logMolarConcVector = logConc,
+#'   pointColors = c("darkgreen", "royalblue3"),
+#'   curveColors = c("darkgreen", "royalblue3"),
+#'   inactiveColor = "gray",
+#'   pointSize = 3,
+#'   alpha = 1,
+#'   plotInactivePoints = F,
+#'   curveResolution = 100,
+#'   plotAspectRatio = c(2,2,5)
+#'   )
 #' }
 #' @export
-plotWaterfall2 <- function(inputFile, activityReadouts = c('Activity'), logMolarConcVector,
+plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarConcVector,
                            pointColors=c('darkgreen','royalblue3'), curveColors=c('darkgreen', 'royalblue3'),
-                           inactiveColor='gray', alpha=1, pointSize=2.0) {
+                           inactiveColor='gray', alpha=1, pointSize=2.0, plotInactivePoints=T, curveResolution=25, plotAspectRatio=c(1,1,3)) {
 
   ## Put in checks
 
   #activity readouts, should have an equal or greater numbrer of point and curve colors
 
-
-
-
+  if(curveResolution < 25) {
+    curveResolution = 25
+  } else if(curveResolution > 250) {
+    curveResolution = 250
+  }
 
   #Important settings
   keyword_1 <- "Active"
@@ -225,10 +243,6 @@ plotWaterfall2 <- function(inputFile, activityReadouts = c('Activity'), logMolar
 
   mainMatrix <- tidyr::pivot_longer(cdata_points, cols = 3:(l-1), names_to = "x", values_to = "y")
 
-  print("mainMatrix Info")
-  print(dim(mainMatrix))
-  print(colnames(mainMatrix))
-
   #mainMatrix <- tidyr::pivot_longer(cdata_points, cols = 2:(l-1), names_to = c("x","z"), names_pattern = "(.)(.)", values_to = "y")
 
   myMain <- mainMatrix
@@ -247,8 +261,9 @@ plotWaterfall2 <- function(inputFile, activityReadouts = c('Activity'), logMolar
   for(readout in keyReadouts) {
     waterfallPoints[[readout]] = data.frame(x=double(), y=double(), z=double())
   }
-  waterfallPoints[['inactive']] = data.frame(x=double(), y=double(), z=double())
-
+  if(plotInactivePoints) {
+    waterfallPoints[['inactive']] = data.frame(x=double(), y=double(), z=double())
+  }
   # hold teh plotted lines, curve fits in here, only need to handle actives, with plot = 0
   waterfallLines = list()
   for(readout in keyReadouts) {
@@ -273,7 +288,8 @@ plotWaterfall2 <- function(inputFile, activityReadouts = c('Activity'), logMolar
                                                     y=waterfall_POINTS_data$y[i],
                                                     z=waterfall_POINTS_data$z[i]))
       waterfallPoints[[readout]] <- wfData
-    } else {
+    } else if(plotInactivePoints) {
+
       wfDataInactive = waterfallPoints[['inactive']]
       wfDataInactive <- dplyr::bind_rows(wfDataInactive, data.frame(x=waterfall_POINTS_data$x[i],
                                                                     y=waterfall_POINTS_data$y[i],
@@ -294,7 +310,7 @@ plotWaterfall2 <- function(inputFile, activityReadouts = c('Activity'), logMolar
   }
 
   f <- function(params, concs, interleave=TRUE) {
-    xx <- seq(min(concs), max(concs), length=25)
+    xx <- seq(min(concs), max(concs), length=curveResolution)
     yy <- with(params, ZERO + (INF-ZERO)/(1 + 10^((LAC50-xx)*HILL)))
     return(data.frame(x=xx, y=yy))
   }
@@ -324,14 +340,7 @@ plotWaterfall2 <- function(inputFile, activityReadouts = c('Activity'), logMolar
     }
   }
 
-
-  #########################
-  #########################
-  #########################
-
-  ###                  Consider as.double for the accumulated matrices.
-
-
+  # verify numeric data
   for(i in 1:length(waterfallPoints)) {
     m <- waterfallPoints[[i]]
     m$x <- as.double(m$x)
@@ -399,40 +408,25 @@ plotWaterfall2 <- function(inputFile, activityReadouts = c('Activity'), logMolar
   # col first then rows
 
   # Pop-up window size
-  newWindowRect = c(138, 161, 886, 760)
+  #newWindowRect = c(138, 161, 886, 760)
+
+  newWindowRect = c(138, 150, 1400, 1000)
+
 
   #SCALING THE 3D WINDOW ---------------------------------------------------------
   #scale=c(concentration, %, #samples),  #
-  rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect)
+  rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect, fov=90)
   #PLOTTING POINTS IN 3D GRAPH ---------------------------------------------------
   start = Sys.time()
   totPointsProcessed = 0
-  print("process waterfall points")
   for(i in 1:length(waterfallPoints))
   {
     m <- waterfallPoints[[i]]
     currentColor = pointColors[i]
-    print(i)
-    print(length(m$x))
-    print(currentColor)
-
-      print(head(m$x))
-      print(head(m$y))
-      print(head(m$x))
-
-
-   # for(k in 1:length(m$x)) {
-
-      # this needs to dereference a larger coordinate system?
-      # or is data already split
-      # QUESTION should we go k in m$x or k in nrow(m)? same?
-      # check if k is seqeuntial or skips
-      rgl::points3d(x=m$x, y=m$y, z=m$z, col = currentColor, size = pointSize)
-      totPointsProcessed = totPointsProcessed + 1
-  #  }
+    rgl::points3d(x=m$x, y=m$y, z=m$z, col = currentColor, size = pointSize)
+    totPointsProcessed = totPointsProcessed + 1
   }
-print(Sys.time()-start)
-print(totPointsProcessed)
+
 
   # for(i in waterfall_POINTS_data_2$x)
   # {
@@ -448,25 +442,12 @@ print(totPointsProcessed)
   #   rgl::lines3d(waterfall_LINES_data_1[i],col = col_3, alpha = alpha_1)
   # }
 
-cnt = 0
   for(i in 1:length(waterfallLines))
   {
     m <- waterfallLines[[i]]
     currentColor = lineColors[i]
-    print(currentColor)
-    #for(k in 1:length(m$x)) {
-
-      # this needs to dereference a larger coordinate system?
-      # or is data already split
-      # QUESTION should we go k in m$x or k in nrow(m)? same?
-      # check if k is seqeuntial or skips
-
-      rgl::lines3d(x=m$x, y=m$y, z=m$z, col = currentColor, alpha=alpha_1, size=50)
-      cnt = cnt + 1
-    #}
+    rgl::lines3d(x=m$x, y=m$y, z=m$z, col = currentColor, alpha=alpha_1, size=50)
   }
-
-print(cnt)
 
 
 
@@ -481,12 +462,12 @@ print(cnt)
   #CREATE BOX AROUND EDGES FOR THE GRAPH -----------------------------------------
   rgl::axes3d(expand = 1.03, box = FALSE, xunit = 'pretty', yunit = "pretty", zunit = 'pretty')
 
-  rgl.material(point_antialias = T, line_antialias = T)
+  rgl::rgl.material(point_antialias = T, line_antialias = T)
 
   # Adding Grid lines
   rgl::grid3d(c("x","y","z+"))
 
-  rgl::aspect3d(1,1,3)
+  rgl::aspect3d(plotAspectRatio[1],plotAspectRatio[2],plotAspectRatio[3])
 
   return(myMain)
 

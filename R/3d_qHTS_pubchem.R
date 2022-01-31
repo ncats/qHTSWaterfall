@@ -31,10 +31,9 @@
 #' @param alpha alpha transparency of the the plot lines, default is 1.0
 #' @examples
 #' \dontrun{
-#' plotWaterfall(inputFile="./data/NCATS_qHTS_NPAC_Genesis_F1.csv", activityReadouts=c("Active", "Nluc100"))
+#' plotWaterfall(inputFile="./data/NCATS_CMT1A_PMP22_Follow_Up.csv", activityReadouts=c("Active", "Nluc100"))
 #' }
-#' @export
-plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), activeToFront = False, logMolarConcVector, pointColors=c('darkgreen','royalblue3'), curveColors=c('darkgreen', 'royalblue3'), inactiveColor='gray', alpha=1) {
+plotWaterfallEarlyVersion <- function(inputFile, activityReadouts = c('Activity'), logMolarConcVector, pointColors=c('darkgreen','royalblue3'), curveColors=c('darkgreen', 'royalblue3'), inactiveColor='gray', alpha=1) {
 
   #Important settings
   keyword_1 <- "Active"
