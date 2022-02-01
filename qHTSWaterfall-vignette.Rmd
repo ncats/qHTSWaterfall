@@ -1,0 +1,70 @@
+---
+title: "qHTSWaterfall-vignette"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{qHTSWaterfall-vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE, cache=FALSE}
+library(knitr)
+library(rgl)
+rgl::setupKnitr(autoprint = T)
+knitr::opts_chunk$set(
+collapse = TRUE,
+echo = TRUE,
+fig.width = 8, fig.height = 8, fig.align = 'left',
+comment = "#>"
+)
+```
+
+```{r, waterfallPlot, webgl=TRUE}
+library(qHTSWaterfall)
+
+# Specify a comma separateed input file. In this example, one is included as 
+# part of the qHTSPackage. If using your own file, provide the file path here.
+
+# This example features active compounds from this study:
+# Martinez NJ, Braisted JC, Dranchak PK, Moran JJ, Larson H, Queme B, Pak E, Dutra A, Rai G, 
+# Cheng KC, Svaren J, Inglese J. Genome-Edited Coincidence and PMP22-HiBiT Fusion Reporter Cell 
+# Lines Enable an Artifact-Suppressive Quantitative High-Throughput Screening Strategy for PMP22
+# Gene-Dosage Disorder Drug Discovery. ACS Pharmacol Transl Sci. 2021 Jun 10;4(4):1422-1436.
+# doi: 10.1021/acsptsci.1c00110. PMID: 34423274; PMCID: PMC8369676.
+
+
+inputFile <- system.file("extdata", "NCATS_CMT1A_PMP22_Follow_Up.csv", package="qHTSWaterfall")
+
+# Non-PubChemm input requires a list of log-molar concentrations, from low to high #concentration.
+logConc <- c(
+-9.011761791,
+-8.534640544,
+-8.057519287,
+-7.580398031,
+-7.103276777,
+-6.626155522,
+-6.149034267,
+-5.671913012,
+-5.194791758,
+-4.717670503,
+-4.240549248
+)
+
+# the main method call with parameters. Use 'help(plotWaterfall' for parameter descriptions.)
+# Note: The displayed resulting plot shown in this vignette page is a low resolution static image.
+# The method will return a high resolution 3D rendering (from the rgl package) that can be resized
+# and rotated.
+qHTSWaterfall::plotWaterfall(
+  inputFile,
+  activityReadouts = c("fluc", "nluc"),
+  logMolarConcVector = logConc,
+  pointColors = c("darkgreen", "royalblue3"),
+  curveColors = c("darkgreen", "royalblue3"),
+  inactiveColor = "gray",
+  pointSize = 3,
+  alpha = 1,
+  plotInactivePoints = F,
+  curveResolution = 250,
+  plotAspectRatio = c(2,2,4)
+)
+```
