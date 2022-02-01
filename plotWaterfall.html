@@ -1,0 +1,128 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><title>R: Plots 3D qHTS waterfall plot, given Pubchem activity file or...</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="R.css" />
+</head><body>
+
+<table width="100%" summary="page for plotWaterfall"><tr><td>plotWaterfall</td><td style="text-align: right;">R Documentation</td></tr></table>
+
+<h2>Plots 3D qHTS waterfall plot, given Pubchem activity file or NCATS qHTS format file.</h2>
+
+<h3>Description</h3>
+
+<p>Plots 3D qHTS waterfall plot, given Pubchem activity file or NCATS qHTS format file.
+</p>
+
+
+<h3>Usage</h3>
+
+<pre>
+plotWaterfall(
+  inputFile,
+  activityReadouts = c("Activity"),
+  logMolarConcVector,
+  pointColors = c("darkgreen", "royalblue3"),
+  curveColors = c("darkgreen", "royalblue3"),
+  inactiveColor = "gray",
+  alpha = 1,
+  pointSize = 2,
+  plotInactivePoints = T,
+  curveResolution = 25,
+  plotAspectRatio = c(1, 1, 3)
+)
+</pre>
+
+
+<h3>Arguments</h3>
+
+<table summary="R argblock">
+<tr valign="top"><td><code>inputFile</code></td>
+<td>
+<p>An optional input file path. If none is provided, a file chooser will prompt.</p>
+</td></tr>
+<tr valign="top"><td><code>activityReadouts</code></td>
+<td>
+<p>Activity data readouts to include in plot</p>
+</td></tr>
+<tr valign="top"><td><code>logMolarConcVector</code></td>
+<td>
+<p>An optional input list of log molar concentrations, if input is not from PubChem.</p>
+</td></tr>
+<tr valign="top"><td><code>pointColors</code></td>
+<td>
+<p>color list for activity readout <em><b>data points</b></em>. The order should match the activityReadoutsList order.</p>
+</td></tr>
+<tr valign="top"><td><code>curveColors</code></td>
+<td>
+<p>color list for activity readout <em><b>fitted dose-response curves</b></em>. The order should match the activityReadoutsList order.</p>
+</td></tr>
+<tr valign="top"><td><code>inactiveColor</code></td>
+<td>
+<p>color to display inactive data, default is 'gray'.</p>
+</td></tr>
+<tr valign="top"><td><code>alpha</code></td>
+<td>
+<p>alpha transparency of the the plot lines, default is 1.0</p>
+</td></tr>
+<tr valign="top"><td><code>pointSize</code></td>
+<td>
+<p>relative size of plotted points, default = 2</p>
+</td></tr>
+<tr valign="top"><td><code>plotInactivePoints</code></td>
+<td>
+<p>TRUE will plot inactive data as datapoints, FALSE Will hide inactive data.</p>
+</td></tr>
+<tr valign="top"><td><code>curveResolution</code></td>
+<td>
+<p>value between 25 and 250, number of points to define dose-response curves. Fewer points renders as connected straight lines.</p>
+</td></tr>
+<tr valign="top"><td><code>plotAspectRatio</code></td>
+<td>
+<p>relative sizes of concentration axis (x), response axis (y), and waterfall width (z). Input as list, derault: c(1, 1, 3)</p>
+</td></tr>
+</table>
+
+
+<h3>Examples</h3>
+
+<pre>
+## Not run: 
+
+# specify sample data file
+filePath &lt;- system.file("extdata", "NCATS_CMT1A_PMP22_Follow_Up.csv", package="qHTSWaterfall")
+
+# supply log molar concentrations (for non-PubChem data only)
+logConc &lt;- c(
+ -9.011761791,
+ -8.534640544,
+ -8.057519287,
+ -7.580398031,
+ -7.103276777,
+ -6.626155522,
+ -6.149034267,
+ -5.671913012,
+ -5.194791758,
+ -4.717670503,
+ -4.240549248
+)
+
+# make plotting call with desired parameter settings
+# 3D Plot will be presented in a separate window.
+plotWaterfall(
+  inputFile=filePath,
+  activityReadouts = c("fluc", "nluc"),
+  logMolarConcVector = logConc,
+  pointColors = c("darkgreen", "royalblue3"),
+  curveColors = c("darkgreen", "royalblue3"),
+  inactiveColor = "gray",
+  pointSize = 3,
+  alpha = 1,
+  plotInactivePoints = F,
+  curveResolution = 100,
+  plotAspectRatio = c(2,2,5)
+  )
+
+## End(Not run)
+</pre>
+
+
+</body></html>
