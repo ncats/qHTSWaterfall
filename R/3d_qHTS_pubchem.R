@@ -21,6 +21,7 @@
 #   install.packages("stringr")
 # }
 
+
 #' Plots 3D qHTS waterfall plot, given Pubchem activity file or NCATS qHTS format file.
 #' @param inputFile An optional input file path. If none is provided, a file chooser will prompt.
 #' @param activityReadouts Activity data readouts to include in plot
@@ -204,20 +205,6 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
     # verify that we have conc values, if not issue warning and request that conc be supplied.
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   }
 
   conc <- format(round(conc, 2), nsmall = 2)
@@ -279,6 +266,19 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
 
   waterfall_POINTS_data <- mainMatrix
 
+  # utility functions to recreate titration curves ----------------------------------------
+  interleave <- function(x) {
+    unlist(lapply(1:(length(x)-1), function(i) c(x[i], x[i+1])))
+  }
+
+  f <- function(params, concs, interleave=TRUE) {
+    xx <- seq(min(concs), max(concs), length=curveResolution)
+    yy <- with(params, ZERO + (INF-ZERO)/(1 + 10^((LAC50-xx)*HILL)))
+    return(data.frame(x=xx, y=yy))
+  }
+
+
+
   #separating the data by sampel data type (readout)------------------------------------------------------------
 
   #hold the ploted points in here
@@ -327,19 +327,6 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
   #taking care of missing data ---------------------------------------------------
   cdata_curves$LAC50[is.na(cdata_curves$LAC50)] <- log10(10)
   cdata_curves$HILL[ is.na(cdata_curves$HILL)] <- 1
-
-
-  #functions to recreate titration curves ----------------------------------------
-  interleave <- function(x) {
-    unlist(lapply(1:(length(x)-1), function(i) c(x[i], x[i+1])))
-  }
-
-  f <- function(params, concs, interleave=TRUE) {
-    xx <- seq(min(concs), max(concs), length=curveResolution)
-    yy <- with(params, ZERO + (INF-ZERO)/(1 + 10^((LAC50-xx)*HILL)))
-    return(data.frame(x=xx, y=yy))
-  }
-
 
   #recreating titration curves keyword_1------------------------------------------
   mainMatrix <- data.frame(x=double(),y=double(),z=double())
@@ -429,13 +416,18 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
                          0.7551258, 0.19022357, -0.6273754,  0, 0.0000000, 0.00000000,  0.0000000,  1),
                        ncol = 4, nrow =4))
 
+  # newMatrix = t(matrix(c(-0.6416085, 0.01792431, -0.9668231,  0, -0.1346225, 0.98157728,  0.1355843,  0,
+  #                        0.7551258, 0.19022357, -0.6273754,  0, 0.00000000, 0.00000000,  0.0000000,  1),
+  #                      ncol = 4, nrow =4))
+
+
   # Matrix was transposed since f(matrix) always reads y1,y2,y3,y4
   # col first then rows
 
   # Pop-up window size
   #newWindowRect = c(138, 161, 886, 760)
 
-  newWindowRect = c(138, 150, 1000, 820)
+  newWindowRect = c(138, 161, 886, 760)
 
 
   #SCALING THE 3D WINDOW ---------------------------------------------------------
@@ -471,7 +463,7 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
   {
     m <- waterfallLines[[i]]
     currentColor = lineColors[i]
-    rgl::lines3d(x=m$x, y=m$y, z=m$z, col = currentColor, alpha=alpha_1, size=50)
+    rgl::lines3d(x=m$x, y=m$y, z=m$z, col = currentColor, alpha=alpha_1)
   }
 
 
@@ -487,16 +479,18 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
   #CREATE BOX AROUND EDGES FOR THE GRAPH -----------------------------------------
   rgl::axes3d(expand = 1.03, box = FALSE, xunit = 'pretty', yunit = "pretty", zunit = 'pretty')
 
-  rgl::rgl.material(point_antialias = T, line_antialias = T)
+  #rgl::rgl.viewpoint(zoom=0.8, userMatrix = newMatrix)
+
+  #rgl::rgl.material(point_antialias = T, line_antialias = T)
 
   # Adding Grid lines
   rgl::grid3d(c("x","y","z+"))
 
   rgl::aspect3d(plotAspectRatio[1],plotAspectRatio[2],plotAspectRatio[3])
 
-  return(myMain)
 
 }
+
 #EXPORTING THE IMAGE FILES -----------------------------------------------------
 
 ## the following code is put as a comment to allow the user to position the interactive
