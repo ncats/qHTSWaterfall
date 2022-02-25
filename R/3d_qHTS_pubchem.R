@@ -370,10 +370,10 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
     all_cdata_curves <- cdata[,c(fit, compId, readout, lac50, hill, inf, zero)]
 
     # partition the data by readout
-    for(readout in names(concMapping)) {
-      cdata_points[[readout]] <- subset(all_cdata_points, all_cdata_points$Sample.Data.Type == readout)
-      cdata_curves[[readout]] <- subset(all_cdata_curves, all_cdata_curves$Sample.Data.Type == readout)
-      colnames(cdata_curves[[readout]]) <- c("Fit_Output", "COMP_ID", "readout", "LAC50", "HILL", "INF", "ZERO")
+    for(currReadout in activityReadouts) {
+      cdata_points[[currReadout]] <- subset(all_cdata_points, all_cdata_points$Sample.Data.Type == currReadout)
+      cdata_curves[[currReadout]] <- subset(all_cdata_curves, all_cdata_curves$Sample.Data.Type == currReadout)
+      colnames(cdata_curves[[currReadout]]) <- c("Fit_Output", "COMP_ID", "readout", "LAC50", "HILL", "INF", "ZERO")
     }
   }
 
