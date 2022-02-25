@@ -31,14 +31,18 @@ extractReadoutColumns <- function(colList, readout, colKey) {
 #' @param inputFile An optional input file path. If none is provided, a file chooser will prompt.
 #' @param activityReadouts Activity data readouts to include in plot
 #' @param logMolarConcVector An optional input list of log molar concentrations, if input is not from PubChem.
-#' @param pointColors color list for activity readout \emph{\bold{data points}}. The order should match the activityReadoutsList order.
-#' @param curveColors color list for activity readout \emph{\bold{fitted dose-response curves}}. The order should match the activityReadoutsList order.
+#' @param pointColors color list for activity readout \emph{\bold{data points}}.
+#' The order should match the activityReadoutsList order.
+#' @param curveColors color list for activity readout \emph{\bold{fitted dose-response curves}}.
+#' The order should match the activityReadoutsList order.
 #' @param inactiveColor color to display inactive data, default is 'gray'.
 #' @param alpha alpha transparency of the the plot lines, default is 1.0
 #' @param pointSize relative size of plotted points, default = 2
 #' @param plotInactivePoints TRUE will plot inactive data as datapoints, FALSE Will hide inactive data.
-#' @param curveResolution value between 25 and 250, number of points to define dose-response curves. Fewer points renders as connected straight lines.
-#' @param plotAspectRatio relative sizes of concentration axis (x), response axis (y), and waterfall width (z). Input as list, derault: c(1, 1, 3)
+#' @param curveResolution value between 25 and 250, number of points to define dose-response curves.
+#' Fewer points renders as connected straight lines.
+#' @param plotAspectRatio relative sizes of concentration axis (x), response axis (y), and waterfall width (z).
+#' Input as list, derault: c(1, 1, 3)
 #' @param lineWeight thickness of fitted curves. Default thickness is 1.0. Decimal numbers are permitted.
 #' @importFrom utils read.csv
 #' @import rgl

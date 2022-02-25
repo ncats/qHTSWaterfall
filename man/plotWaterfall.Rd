@@ -26,9 +26,11 @@ plotWaterfall(
 
 \item{logMolarConcVector}{An optional input list of log molar concentrations, if input is not from PubChem.}
 
-\item{pointColors}{color list for activity readout \emph{\bold{data points}}. The order should match the activityReadoutsList order.}
+\item{pointColors}{color list for activity readout \emph{\bold{data points}}.
+The order should match the activityReadoutsList order.}
 
-\item{curveColors}{color list for activity readout \emph{\bold{fitted dose-response curves}}. The order should match the activityReadoutsList order.}
+\item{curveColors}{color list for activity readout \emph{\bold{fitted dose-response curves}}.
+The order should match the activityReadoutsList order.}
 
 \item{inactiveColor}{color to display inactive data, default is 'gray'.}
 
@@ -38,9 +40,11 @@ plotWaterfall(
 
 \item{plotInactivePoints}{TRUE will plot inactive data as datapoints, FALSE Will hide inactive data.}
 
-\item{curveResolution}{value between 25 and 250, number of points to define dose-response curves. Fewer points renders as connected straight lines.}
+\item{curveResolution}{value between 25 and 250, number of points to define dose-response curves.
+Fewer points renders as connected straight lines.}
 
-\item{plotAspectRatio}{relative sizes of concentration axis (x), response axis (y), and waterfall width (z). Input as list, derault: c(1, 1, 3)}
+\item{plotAspectRatio}{relative sizes of concentration axis (x), response axis (y), and waterfall width (z).
+Input as list, derault: c(1, 1, 3)}
 
 \item{lineWeight}{thickness of fitted curves. Default thickness is 1.0. Decimal numbers are permitted.}
 }
