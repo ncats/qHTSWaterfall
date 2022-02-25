@@ -15,7 +15,8 @@ plotWaterfall(
   pointSize = 2,
   plotInactivePoints = T,
   curveResolution = 25,
-  plotAspectRatio = c(1, 1, 3)
+  plotAspectRatio = c(1, 1, 3),
+  lineWeight = 1
 )
 }
 \arguments{
@@ -40,6 +41,8 @@ plotWaterfall(
 \item{curveResolution}{value between 25 and 250, number of points to define dose-response curves. Fewer points renders as connected straight lines.}
 
 \item{plotAspectRatio}{relative sizes of concentration axis (x), response axis (y), and waterfall width (z). Input as list, derault: c(1, 1, 3)}
+
+\item{lineWeight}{thickness of fitted curves. Default thickness is 1.0. Decimal numbers are permitted.}
 }
 \description{
 Plots 3D qHTS waterfall plot, given Pubchem activity file or NCATS qHTS format file.

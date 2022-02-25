@@ -21,6 +21,11 @@
 #   install.packages("stringr")
 # }
 
+extractReadoutColumns <- function(colList, readout, colKey) {
+  cols <- colList[grep(colKey, colList)]
+  col <- cols[grep(readout, cols)]
+  return(col)
+}
 
 #' Plots 3D qHTS waterfall plot, given Pubchem activity file or NCATS qHTS format file.
 #' @param inputFile An optional input file path. If none is provided, a file chooser will prompt.
@@ -34,6 +39,7 @@
 #' @param plotInactivePoints TRUE will plot inactive data as datapoints, FALSE Will hide inactive data.
 #' @param curveResolution value between 25 and 250, number of points to define dose-response curves. Fewer points renders as connected straight lines.
 #' @param plotAspectRatio relative sizes of concentration axis (x), response axis (y), and waterfall width (z). Input as list, derault: c(1, 1, 3)
+#' @param lineWeight thickness of fitted curves. Default thickness is 1.0. Decimal numbers are permitted.
 #' @importFrom utils read.csv
 #' @import rgl
 #' @import stringr
@@ -79,7 +85,7 @@
 #' @export
 plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarConcVector,
                            pointColors=c('darkgreen','royalblue3'), curveColors=c('darkgreen', 'royalblue3'),
-                           inactiveColor='gray', alpha=1, pointSize=2.0, plotInactivePoints=T, curveResolution=25, plotAspectRatio=c(1,1,3)) {
+                           inactiveColor='gray', alpha=1, pointSize=2.0, plotInactivePoints=T, curveResolution=25, plotAspectRatio=c(1,1,3), lineWeight=1.0) {
 
   ## Put in checks
 
@@ -122,19 +128,40 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
   #Checking if input file is from pubchem ----------------------------------------
   if("PUBCHEM_ACTIVITY_OUTCOME" %in% heads){
     pubchem_data <- 1
-  }else{
+    # verify the activityReadouts are in the file, if activity readouts are > 1
+    if(length(activityReadouts) > 1) {
+      for(readout in activityReadouts) {
+        if(length(grep(readout, heads)) < 1) {
+          warning(paste0("The following readout is not found in this PubChem file: ",readout))
+          return(NULL)
+        } else {
+          print(paste0("Readout found: ",readout))
+        }
+      }
+    }
+  } else{
     pubchem_data <- 0
   }
 
   #Identifying data headers to load ----------------------------------------------
-  if(pubchem_data == 1){
+  if(pubchem_data == 1) {
+
     #matching variable names
-    fit <- "Fit_Output"
+    compId <- "PUBCHEM_CID"
     readout <- "PUBCHEM_ACTIVITY_OUTCOME"
-    lac50 <- "Fit_LogAC50"
-    hill <- "Fit_HillSlope"
-    inf <- "Fit_InfiniteActivity"
-    zero <- "Fit_ZeroActivity"
+    fit <- "Fit_Output"
+
+    # readout specific column names, unlike NCATS format
+    lac50 <- list()
+    hill <- list()
+    inf <- list()
+    zero <- list()
+    for(currReadout in activityReadouts) {
+      lac50[[currReadout]] <- extractReadoutColumns(heads, currReadout, "Fit_LogAC50")
+      hill[[currReadout]] <- extractReadoutColumns(heads, currReadout, "Fit_HillSlope")
+      inf[[currReadout]] <- extractReadoutColumns(heads, currReadout, "Fit_InfiniteActivity")
+      zero[[currReadout]] <- extractReadoutColumns(heads, currReadout, "Fit_ZeroActivity")
+    }
 
     #finding the index to start reading
     finder <- read.csv(ifile, header = TRUE, na.strings = NULL, nrows = 10)
@@ -147,37 +174,95 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
     a <- 1 #counting
 
     #Looking for concentration values
-    for(i in 1:heads_len) {
-      if(str_starts(heads[i], "Activity.at") == TRUE &
-         is.na(cdata[1,i]) == FALSE){
-        conc[a] <- heads[i]
-        conc_loc[a] <- i
-        a <- a+1
+    # find conc for each readout or choose 1
+    concCols <- grep("Activity.at", heads)
+    allConcCols <- heads[concCols]
+
+    concMapping = list()
+
+    # should we verify the length of the concentration vectors???
+    currLength = 0
+    for(currReadout in activityReadouts) {
+      currCols <- grep(currReadout, allConcCols)
+      if(currLength != 0 && currLength != length(currCols)) {
+        print("FYI: Readouts have different length titrations.")
       }
-    }
-    titrations <- length(conc)
-    x <- NULL
-    y <- NULL
-
-    #Extracting concentration values
-    for(i in 1:titrations) {
-      s <- unlist(str_split(conc[i], "\\."))
-      x[i] <- str_c(s[3], ".", s[4])
-      y[i] <- s[5]
+      currLength <- length(currCols)
+      concMapping[[currReadout]] <- allConcCols[currCols]
     }
 
-    #converting to numeric
-    x <- as.numeric(x)
+
+
+    # for(i in 1:heads_len) {
+    #   if(str_starts(heads[i], "Activity.at") == TRUE &
+    #      is.na(cdata[1,i]) == FALSE){
+    #     conc[a] <- heads[i]
+    #     conc_loc[a] <- i
+    #     a <- a+1
+    #   }
+    # }
+
+
+
+
+    concValues = list()
+    concUnits = list()
+
+    #Extracting concentration values for each readout
+    for(currReadout in names(concMapping)) {
+      conc <- concMapping[[currReadout]]
+      x <- NULL
+      y <- NULL
+      # if we have one readout, we have no readout id in column names
+      if(length(activityReadouts) == 1) {
+        for(i in 1:length(conc)) {
+          s <- unlist(strsplit(conc[i], "\\."))
+          x[i] <- str_c(s[3], ".", s[4])
+          y[i] <- s[5]
+        }
+      } else {
+        # we have multiple readouts
+        # the readout id may be anywhere in title
+        # look for '.at.' and split after that
+        # take the next three tokens as conc and conc unit
+        for(i in 1:length(conc)) {
+          #print(conc[i])
+          concData <- substr(conc[i], (str_locate(conc[i], "\\.at\\.")[2]+1), nchar(conc[i]))
+          #print(concData)
+          concData <- unlist(strsplit(concData, "\\."))
+          #print(concData)
+          if(length(concData) > 2) {
+            x[i] <- paste0(concData[1],".",concData[2])
+            y[i] <- substr(concData[3],1,2)
+            #print(x[i])
+            #print(y[i])
+          } else {
+            x[i] <- concData[1]
+            y[i] <- substr(concData[2],1,2)
+            #print(x[i])
+            #print(y[i])
+          }
+        }
+      }
+
+      x <- as.numeric(x)
+      concValues[[currReadout]] <- x
+      concUnits[[currReadout]] <- y
+    }
+
 
   } else {
     cdata <- read.csv(ifile, header=TRUE, na.string="null")
     #matching variable names
+    compId <- "Sample.ID"
     fit <- "Fit_Output"
     readout <- "Sample.Data.Type"
     lac50 <- "Log.AC50..M."
     hill <- "Hill.Coef"
     inf <- "Inf.Activity"
     zero <- "Zero.Activity"
+
+
   }
 
 
@@ -187,73 +272,148 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
   #statement
   #REMINDER: it is the log([concentration(M)])
 
+  titrationLengths <- list()
+  minConc <- list()
+  maxConc <- list()
+
   if(pubchem_data == 1){
-    conc <- NULL
-    #log(molar concentration)
-    l <- length(y)
-    for(i in 1:l){
-      conc[i] <- switch(y[i],
-                        "uM" = log(x[i]*1e-06),
-                        "nM" = log(x[i]*1e-09),
-                        "mM" = log(x[i]*1e-03),
-                        "pM" = log(x[i]*1e-12),
-                        "cM" = log(x[i]*1e-02),
-                        "dM" = log(x[i]*1e-01),
-                        "fM" = log(x[i]*1e-15))
+
+    for(currReadout in names(concValues)) {
+      x <- concValues[[currReadout]]
+      y <- concUnits[[currReadout]]
+      conc <- NULL
+      #log(molar concentration)
+
+      for(i in 1:length(y)){
+        conc[i] <- switch(y[i],
+                          "uM" = log10(x[i]*1e-06),
+                          "nM" = log10(x[i]*1e-09),
+                          "mM" = log10(x[i]*1e-03),
+                          "pM" = log10(x[i]*1e-12),
+                          "cM" = log10(x[i]*1e-02),
+                          "dM" = log10(x[i]*1e-01),
+                          "fM" = log10(x[i]*1e-15),
+                          log10(x[i]))
+      }
+      conc <- format(round(conc, 2), nsmall = 2)
+      conc <- as.numeric(conc)
+      concValues[[currReadout]] <- conc
+
+      titrationLengths[[currReadout]] <- length(conc)
+      minConc[[currReadout]] <- min(conc)
+      maxConc[[currReadout]] <- max(conc)
     }
   }else{
     # verify that we have conc values, if not issue warning and request that conc be supplied.
 
-
+    # for now, apply the single logMolarConcVector to all readouts
+    concValues <- list()
+    for(currReadout in activityReadouts) {
+      logMolarConcVector <- format(round(logMolarConcVector, 2), nsmall = 2)
+      logMolarConcVector <- as.numeric(logMolarConcVector)
+      concValues[[currReadout]] <- logMolarConcVector
+      minConc[[currReadout]] <- min(logMolarConcVector)
+      maxConc[[currReadout]] <- max(logMolarConcVector)
+    }
   }
 
-  conc <- format(round(conc, 2), nsmall = 2)
-  conc <- as.numeric(conc)
 
-  titrations <- length(conc)
-  lowerBound <- min(conc)
-  upperBound <- max(conc)
+  # Now we have the following concentration related lists, per readout
+  # concValues, minConc, maxConc, values or vectors, named by readout
+
 
   #creating a Fit_Output if not given one ----------------------------------------
   if(fit %in% heads == FALSE){
-    l <- nrow(cdata)
-    for (i in 1:l){
-      if(cdata[i,readout] %in% keyReadouts) {
-        #if(cdata[i,readout]==keyword_1 || cdata[i,readout]==keyword_2){
-        cdata[i,fit] = 1
-      }else{
-        cdata[i,fit] = 0
+    if(pubchem_data == 1) {
+      for (i in 1:nrow(cdata)){
+        if(cdata[i,readout] == 'Active') {
+          #if(cdata[i,readout]==keyword_1 || cdata[i,readout]==keyword_2){
+          cdata[i,fit] = 1
+        } else {
+          cdata[i,fit] = 0
+        }
+      }
+    } else {
+      for (i in 1:nrow(cdata)){
+        if(cdata[i,readout] %in% keyReadouts) {
+          #if(cdata[i,readout]==keyword_1 || cdata[i,readout]==keyword_2){
+          cdata[i,fit] = 1
+        } else {
+          cdata[i,fit] = 0
+        }
       }
     }
   }
 
+
+  # need to capture the list of data for each readout
+
   #creating smaller data sets with only needed data-------------------------------
+  cdata_points <- list()
+  cdata_curves <- list()
   if(pubchem_data == 1){
-    cdata_points <- cdata %>% select(readout, conc_loc)
-    cdata_curves <- cdata %>% select(fit, readout, lac50, hill, inf, zero)
-  }else{
+    for(currReadout in names(concMapping)) {
+      concCols <- concMapping[[currReadout]]
+      cdata_points[[currReadout]] <- cdata %>% select(fit, compId, readout, concCols)
+      cdata_curves[[currReadout]] <- cdata %>% select(compId, fit, readout, lac50[[currReadout]], hill[[currReadout]], inf[[currReadout]], zero[[currReadout]])
+      colnames(cdata_curves[[currReadout]]) <- c("COMP_ID", "Fit_Output", "readout", "LAC50", "HILL", "INF", "ZERO")
+      # need to alter readout to reflect the readout
+      cdata_curves[[currReadout]]$readout <- currReadout
+    }
+
+  } else {
     dataCols <- NULL
-    for(i in 1:titrations){
+    for(i in 1:length(conc)){
       dataCols[i] <- c(paste("Data",(i-1), sep=""))
     }
-    cdata_points <- cdata[,c(fit, readout, dataCols)]
-    cdata_curves <- cdata[,c(fit, readout, lac50, hill, inf, zero)]
+    all_cdata_points <- cdata[,c(fit, compId, readout, dataCols)]
+    all_cdata_curves <- cdata[,c(fit, compId, readout, lac50, hill, inf, zero)]
+
+    # partition the data by readout
+    for(readout in names(concMapping)) {
+      cdata_points[[readout]] <- subset(all_cdata_points, all_cdata_points$Sample.Data.Type == readout)
+      cdata_curves[[readout]] <- subset(all_cdata_curves, all_cdata_curves$Sample.Data.Type == readout)
+      colnames(cdata_curves[[readout]]) <- c("Fit_Output", "COMP_ID", "readout", "LAC50", "HILL", "INF", "ZERO")
+    }
   }
 
-  names(cdata_curves) <- c("Fit_Output", "readout", "LAC50", "HILL", "INF", "ZERO")
-
+  # names(cdata_curves) <- c("Fit_Output", "readout", "LAC50", "HILL", "INF", "ZERO"
 
 
   #titration points to be put on the graph ---------------------------------------
-  l <- nrow(cdata_points)
-  for(i in 1:l){
-    cdata_points$z[i] <- i
+
+  numReadouts <- length(activityReadouts)
+  readoutCount <- 1
+  curveCount <- 1
+  for(currReadout in activityReadouts) {
+    curveCount <- readoutCount
+    dataPoints <- cdata_points[[currReadout]]
+    for(i in 1:nrow(dataPoints)) {
+      dataPoints$z[i] <- curveCount
+      curveCount <- curveCount + numReadouts
+    }
+    colnames(dataPoints) <- c("Fit_Output","COMP_ID", "readout", concValues[[currReadout]], "z")
+    # set the readout columnn
+    dataPoints$readout <- currReadout
+    cdata_points[[currReadout]] <- dataPoints
+    readoutCount <- readoutCount + 1
   }
-  colnames(cdata_points) <- c("Fit_Output", "readout", conc, "z")
 
-  l <- length(colnames(cdata_points))
 
-  mainMatrix <- tidyr::pivot_longer(cdata_points, cols = 3:(l-1), names_to = "x", values_to = "y")
+  # pivot main matrices
+  fullMatriix <- NULL
+  readoutCount <- 1
+  # first stack the matrices
+  for(currReadout in activityReadouts) {
+    if(readoutCount == 1) {
+      fullMatrix <- cdata_points[[currReadout]]
+    } else {
+      fullMatrix <- rbind(fullMatrix, cdata_points[[currReadout]])
+    }
+    readoutCount <- readoutCount + 1
+  }
+
+  mainMatrix <- tidyr::pivot_longer(fullMatrix, cols = 4:(ncol(fullMatrix)-1), names_to = "x", values_to = "y")
 
   #mainMatrix <- tidyr::pivot_longer(cdata_points, cols = 2:(l-1), names_to = c("x","z"), names_pattern = "(.)(.)", values_to = "y")
 
@@ -283,16 +443,16 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
 
   #hold the ploted points in here
   waterfallPoints = list()
-  for(readout in keyReadouts) {
-    waterfallPoints[[readout]] = data.frame(x=double(), y=double(), z=double())
+  for(currReadout in keyReadouts) {
+    waterfallPoints[[currReadout]] = data.frame(x=double(), y=double(), z=double())
   }
   if(plotInactivePoints) {
     waterfallPoints[['inactive']] = data.frame(x=double(), y=double(), z=double())
   }
   # hold teh plotted lines, curve fits in here, only need to handle actives, with plot = 0
   waterfallLines = list()
-  for(readout in keyReadouts) {
-    waterfallLines[[readout]] = data.frame(x=double(), y=double(), z=double())
+  for(currReadout in keyReadouts) {
+    waterfallLines[[currReadout]] = data.frame(x=double(), y=double(), z=double())
   }
 
 
@@ -321,7 +481,6 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
                                                                     z=waterfall_POINTS_data$z[i]))
       waterfallPoints[['inactive']] <- wfDataInactive
     }
-
   }
 
   #taking care of missing data ---------------------------------------------------
@@ -331,25 +490,36 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
   #recreating titration curves keyword_1------------------------------------------
   mainMatrix <- data.frame(x=double(),y=double(),z=double())
   rowIndex = 0;
-  l <- nrow(cdata_curves)
-  for (i in 1:l) {
 
-    readout = cdata_curves[i,"readout"]
+  # Need to use the same strategy used for setting z on points, interleaving respose curves for different readouts
+  numReadouts <- length(activityReadouts)
+  readoutCount <- 1
+  curveCount <- 1
+  for(currReadout in activityReadouts) {
+    currCurveSet <- cdata_curves[[currReadout]]
+    curveCount = readoutCount
+    l <- nrow(currCurveSet)
+    for (i in 1:l) {
 
-    if(cdata_curves[i,"Fit_Output"]==1 && readout %in% keyReadouts) {
+      currReadout = currCurveSet[i,"readout"]
 
-      wfLines <- waterfallLines[[readout]]
+      if(currCurveSet[i,"Fit_Output"]==1 && readout %in% keyReadouts) {
 
-      #    if(cdata_curves[i,"Fit_Output"]==1 && cdata_curves[i,"readout"]==keyword_1) {
-      rowIndex = rowIndex+1
-      d1 <- data.frame(f(cdata_curves[i,], c(lowerBound, upperBound)), z=i)
+        wfLines <- waterfallLines[[currReadout]]
 
-      #add multiple rows
-      wfLines <- dplyr::bind_rows(wfLines, data.frame(x=d1[,1], z=i, y=d1[,2]))
-      #needed for break mechanic when graphing
-      wfLines <- dplyr::bind_rows(wfLines, data.frame(x=NA, z=NA, y=1))
-      waterfallLines[[readout]] <- wfLines
+        #    if(cdata_curves[i,"Fit_Output"]==1 && cdata_curves[i,"readout"]==keyword_1) {
+        rowIndex = rowIndex+1
+        d1 <- data.frame(f(currCurveSet[i,], c(minConc[[currReadout]], maxConc[[currReadout]])), z=i)
+
+        #add multiple rows
+        wfLines <- dplyr::bind_rows(wfLines, data.frame(x=d1[,1], z=curveCount, y=d1[,2]))
+        #needed for break mechanic when graphing
+        wfLines <- dplyr::bind_rows(wfLines, data.frame(x=NA, z=NA, y=1))
+        waterfallLines[[currReadout]] <- wfLines
+        curveCount <- curveCount + numReadouts
+      }
     }
+    readoutCount <- readoutCount + 1
   }
 
   # verify numeric data
@@ -441,6 +611,7 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
     m <- waterfallPoints[[i]]
     currentColor = pointColors[i]
     rgl::points3d(x=m$x, y=m$y, z=m$z, col = currentColor, size = pointSize)
+    # rgl::spheres3d(x=m$x, y=m$y, z=m$z, col = currentColor, radius = pointSize)
     totPointsProcessed = totPointsProcessed + 1
   }
 
@@ -463,7 +634,7 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
   {
     m <- waterfallLines[[i]]
     currentColor = lineColors[i]
-    rgl::lines3d(x=m$x, y=m$y, z=m$z, col = currentColor, alpha=alpha_1)
+    rgl::lines3d(x=m$x, y=m$y, z=m$z, col = currentColor, alpha=alpha_1, lwd=lineWeight)
   }
 
 
