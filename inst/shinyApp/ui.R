@@ -75,14 +75,15 @@ library(shinyjs)
 #   return(readoutDiv)
 # }
 
-useShinyjs()
+
 
 shinyUI(fluidPage(
+  useShinyjs(),
 
   titlePanel("Waterfall Plot"),
 
   sidebarLayout(
-    sidebarPanel("Controls",
+    sidebarPanel(id="file_input",
                  fileInput(
                    inputId = 'inputFile',
                    label = 'Select Input File',

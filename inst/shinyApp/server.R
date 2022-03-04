@@ -27,20 +27,37 @@ addReadoutSelector <- function(readouts) {
     # choices = c("steelblue", "cornflowerblue",
     #             "firebrick", "palegoldenrod",
     #             "forestgreen")
-
+    cDiv <- div(id=paste0(readout,"-readout-color-div"),
     readoutColor <- colourpicker::colourInput(
       inputId = paste0(readout,'-line-color'), label = paste0(readout," line color:"),
       value = colorVal
-    )
-    colorChoosers[[paste0(readout,'-line-color')]] <- readoutColor
+    ),
+    #colorChoosers[[paste0(readout,'-line-color')]] <- readoutColor
 
     readoutColor <- colourpicker::colourInput(
       inputId = paste0(readout,'-point-color'), label = paste0(readout," point color:"),
       value = colorVal
     )
-    colorChoosers[[paste0(readout,'-point-color')]] <- readoutColor
+    #colorChoosers[[paste0(readout,'-point-color')]] <- readoutColor
+    )
+    colorChoosers[[paste0(readout,"-readout-color-div")]] <- cDiv
 
   }
+
+  plotInactivePoints <- div(id="plot-inactives-div",
+                            checkboxInput(inputId = "plot-inactives-checkbox", label="Include inactive results:", value=T))
+
+  colorChoosers[['plot-inactives-div']] <- plotInactivePoints
+
+  # add inactive color
+  inactiveColor <- div(id="inactive-color-div",colourpicker::colourInput(
+    inputId = "inactive-point-color", label =  "Inactive point color:",
+    value = 'gray'
+  ))
+
+  colorChoosers[['inactive-color-div']] <- inactiveColor
+
+  colorDiv <- div(id="color-controls-div", colorChoosers)
 
   readoutDiv <- div(
 
@@ -54,21 +71,28 @@ addReadoutSelector <- function(readouts) {
       choiceValues = readoutBoxIds,
       inline = T
     ),
-    colorChoosers
-    #for(readout in readouts) {
-
-
-    #    colourInput(inputreadout, "Choose color:", "cornflowerblue")
-    # choices = c("steelblue", "cornflowerblue",
-    #             "firebrick", "palegoldenrod",
-    #             "forestgreen")
-
-    # readoutColor <- colourpicker::colourInput(
-    #   inputId = 'fluc-color', label = paste0("Pick a color for ","fluc",":"),
-    #   value = 'cornflowerblue'
-    # )
-    #}
+    colorDiv
   )
+
+  # now the extra controls
+
+  # point size
+  # line weight
+  # plot aspect ratio (x (conc), y(response), z(curve position))
+  # curve resolution 25, slider
+  # lineWeight 1.0
+  # antialising, smoothing curves F
+
+  # consideration of managing process
+
+  # phase 1 is to read the input to be able to set initial UI values
+  # Can we capture and keep the generated data in the core class as a data object?
+  # So process / update with a button
+  # if core data is null, then update will create data, then plot
+  # if data exists, update will just re-plot with desired params.
+
+  # need a method to collect parameters and replot
+  # need to be able to generate a plot in the main panel.
 }
 
 
@@ -91,23 +115,30 @@ server <- function(input, output, session) {
     status <<- qHTSWaterfall:::evaluateInputFile(input$inputFile$datapath)
 
     if(length(status$readouts) > 0) {
-      print("back in server... adding ui")
-
       insertUI(ui=addReadoutSelector(status$readouts), selector='#inputFile_progress', where='afterEnd')
     }
 
+
+
    }, ignoreNULL = TRUE)
 
+  observeEvent(input[["plot-inactives-checkbox"]],
+                {
+                  print("in inactives listener...")
+                    if((input[["plot-inactives-checkbox"]])) {
+                      shinyjs::show('inactive-color-div')
+                    } else {
+                      shinyjs::hide('inactive-color-div',anim=T, time=0.25)
+                    }
+                }
+                ,ignoreInit=TRUE)
 
   observeEvent(input$readoutCollection, {
-
-
-
-      print("Hey checkbox click, can we print str????")
 
       if(is.null(input$readoutCollection)) {
         return
       }
+
       vals <- input$readoutCollection
 
       print("base readouts")
@@ -116,48 +147,39 @@ server <- function(input, output, session) {
 
       print("checkbox values")
       print(vals)
-      # fluc-readout-checkbox nluc-readout-checkbox
+
+      # need to assess current selections, and add back as needed
+      for(readout in vals) {
+        readout <- gsub("-readout-checkbox", "", readout)
+        print("In insertUI testing... readout=")
+        #print(readout)
+        currId <- paste0(readout, "-readout-color-div")
+        shinyjs::show(currId)
+      }
+
+
 
       toDisable <- c()
       if(is.null(vals)) {
         for(readout in status$readouts) {
-          toDisable <- c(toDisable, paste0(readout,'-line-color'))
-          toDisable <- c(toDisable, paste0(readout,'-point-color'))
+          toDisable <- c(toDisable, paste0(readout,'-readout-color-div'))
+
         }
       } else {
 
         vals <- gsub('-readout-checkbox', '', vals)
 
-        #allReadouts <- paste0(status$readouts, collapse='-line-color')
-        #allReadouts <- c(allReadouts, paste0(status$readouts, collapse='-point-color'))
-        #print("allReadouts")
-        #print(allReadouts)
         offReadouts <- setdiff(status$readouts, vals)
-        print("offreadouts")
-        print(offReadouts)
 
         for(readout in offReadouts) {
-          toDisable <- c(toDisable, paste0(readout,'-line-color'))
-          toDisable <- c(toDisable, paste0(readout,'-point-color'))
+          toDisable <- c(toDisable, paste0(readout,'-readout-color-div'))
         }
       }
 
       for(control in toDisable) {
-
-        #print(str(session[[control]]))
-        #print(str(input[[control]]))
-
-        shinyjs::disable(id=control)
-        #removeUI(input[[control]])
-        print('disabling ...')
-        print(control)
+        shinyjs::hide(id=control, anim=T, time=0.5)
       }
 
-      #v2 <- isolate(input$readoutCollection)
-      #print(v2)
-      # print(input$`fluc-readout-checkbox`)
-
-      # print(input$readoutCollection[['fluc-readout-checkbox']])
 
 
   }, ignoreNULL = FALSE, ignoreInit = TRUE)
