@@ -19,5 +19,6 @@ LineEndingConversion: Posix
 BuildType: Package
 PackageUseDevtools: Yes
 PackageInstallArgs: --no-multiarch --with-keep.source
-PackageCheckArgs: --ignore-vignettes --no-manual
+PackageBuildArgs: --no-vignettes --ignore--vignettes
+PackageCheckArgs: --no-examples --no-vignettes --ignore-vignettes --no-manual
 PackageRoxygenize: rd,collate,namespace

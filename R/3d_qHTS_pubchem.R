@@ -43,6 +43,7 @@ extractReadoutColumns <- function(colList, readout, colKey) {
 #' Fewer points renders as connected straight lines.
 #' @param plotAspectRatio relative sizes of concentration axis (x), response axis (y), and waterfall width (z).
 #' Input as list, derault: c(1, 1, 3)
+#' @param antialiasSmoothing smooths plot line rendering. Default is FALSE. Setting as TRUE will smooth lines, but may slow response during re-drawing plot.
 #' @param lineWeight thickness of fitted curves. Default thickness is 1.0. Decimal numbers are permitted.
 #' @importFrom utils read.csv
 #' @import rgl
@@ -89,7 +90,8 @@ extractReadoutColumns <- function(colList, readout, colKey) {
 #' @export
 plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarConcVector,
                            pointColors=c('darkgreen','royalblue3'), curveColors=c('darkgreen', 'royalblue3'),
-                           inactiveColor='gray', alpha=1, pointSize=2.0, plotInactivePoints=T, curveResolution=25, plotAspectRatio=c(1,1,3), lineWeight=1.0) {
+                           inactiveColor='gray', alpha=1, pointSize=2.0, plotInactivePoints=T, curveResolution=25,
+                          plotAspectRatio=c(1,1,3), lineWeight=1.0, antialiasSmoothing = F) {
 
   ## Put in checks
 
@@ -606,7 +608,11 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
 
   #SCALING THE 3D WINDOW ---------------------------------------------------------
   #scale=c(concentration, %, #samples),  #
-  rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect)
+  rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect, silent=T)
+
+
+
+
   #PLOTTING POINTS IN 3D GRAPH ---------------------------------------------------
   start = Sys.time()
   totPointsProcessed = 0
@@ -634,6 +640,8 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
   #   rgl::lines3d(waterfall_LINES_data_1[i],col = col_3, alpha = alpha_1)
   # }
 
+  #rgl::rgl.material(point_antialias = F, line_antialias = antialiasSmoothing)
+
   for(i in 1:length(waterfallLines))
   {
     m <- waterfallLines[[i]]
@@ -652,18 +660,57 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
   # }
 
   #CREATE BOX AROUND EDGES FOR THE GRAPH -----------------------------------------
-  rgl::axes3d(expand = 1.03, box = FALSE, xunit = 'pretty', yunit = "pretty", zunit = 'pretty')
-
-  #rgl::rgl.viewpoint(zoom=0.8, userMatrix = newMatrix)
-
-  #rgl::rgl.material(point_antialias = T, line_antialias = T)
-
-  # Adding Grid lines
-  rgl::grid3d(c("x","y","z+"))
 
   rgl::aspect3d(plotAspectRatio[1],plotAspectRatio[2],plotAspectRatio[3])
 
 
+  # Adding Grid lines
+  rgl::grid3d(side=c("x","y","z+"))
+
+
+  rgl::axes3d(expand = 1.03, box = FALSE, xunit = 'pretty', yunit = "pretty", zunit = 'pretty')
+
+
+  # edges = c("x--", "y--", "z--")
+
+  #rgl::rgl.viewpoint(zoom=0.8, userMatrix = newMatrix)
+
+
+#
+#   wid <- rgl::rglwidget(webgl=T)
+#   wid
+
+}
+
+
+evaluateInputFile <- function(filePath) {
+  status <- list()
+  cdata <- read.csv(filePath, header=TRUE, na.string="null")
+  heads <- colnames(cdata)
+  if("PUBCHEM_ACTIVITY_OUTCOME" %in% heads){
+    status$pubchem <- 1
+    potencyReadouts = heads[grep("Phenotype", heads)]
+    print(potencyReadouts)
+    potencyReadouts <- gsub('Phenotype', '', potencyReadouts)
+    print(potencyReadouts)
+    potencyReadouts <- gsub('\\.', '', potencyReadouts)
+    print(potencyReadouts)
+  } else {
+    print(dim(cdata))
+    print("NON-pubmed data file!!!")
+    status$pubchem <- 0
+    readoutCol <- heads[grep("Sample.Data.Type", heads)]
+    print("readoutCol")
+    print(readoutCol)
+    if(!is.null(readoutCol) && length(readoutCol > 0)) {
+       readouts <- unique(cdata[[readoutCol]])
+       status$readouts <- readouts
+    }
+    print(status$readouts)
+  }
+  print("pubchem status =")
+  print(status$pubchem)
+  return(status)
 }
 
 #EXPORTING THE IMAGE FILES -----------------------------------------------------

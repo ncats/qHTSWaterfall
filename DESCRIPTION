@@ -20,7 +20,10 @@ Imports:
   rgl,
   stringr,
   dplyr,
-  tidyr
+  tidyr,
+  shiny,
+  colourpicker,
+  shinyjs
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
