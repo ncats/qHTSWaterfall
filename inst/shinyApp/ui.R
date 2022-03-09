@@ -83,7 +83,7 @@ shinyUI(fluidPage(
   titlePanel("Waterfall Plot"),
 
   sidebarLayout(
-    sidebarPanel(id="file_input",
+    sidebarPanel(id="file_input", width=4,
                  fileInput(
                    inputId = 'inputFile',
                    label = 'Select Input File',
@@ -95,7 +95,8 @@ shinyUI(fluidPage(
                  )
 
                  ),
-    mainPanel("Plot")
+    mainPanel(id="mainPanel", title="Plot Preview", width=8, plotOutput(outputId='plotPanel')),
+    position='left'
   )
 
 

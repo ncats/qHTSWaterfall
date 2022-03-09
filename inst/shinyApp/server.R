@@ -59,6 +59,26 @@ addReadoutSelector <- function(readouts) {
 
   colorDiv <- div(id="color-controls-div", colorChoosers)
 
+  concTextBox <- textAreaInput(inputId="concTextArea",label="Log Molar Conc. Values(lowest to highest, one per line or comma separated)",cols=12, rows=15)
+  pointSize <- sliderInput(inputId = "pointSize", label="Point Size [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T)
+  lineWeight <- sliderInput(inputId = "lineWeight", label="Line Weight [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T)
+  aspectX <- selectInput(inputId="aspectX", label="X (conc.) size ratio", choices=c(1:10), selected=1)
+  aspectY <- selectInput(inputId="aspectY", label="Y (response) size ratio", choices=c(1:10), selected=1)
+  aspectZ <- selectInput(inputId="aspectZ", label="Z (plot width) size ratio", choices=c(1:10), selected=3)
+  antiAliasing <- checkboxInput(inputId="antialias", label="Antialias/Smooth Lines",value=T)
+  curvePointCount <- selectInput(inputId="curvePoints", label="Number of points to define curve fits.", choices=c(seq(25,250,25)), selected=100)
+
+  extraParamsDiv <- div(
+    concTextBox,
+    pointSize,
+    lineWeight,
+    aspectX,
+    aspectY,
+    aspectZ,
+    antiAliasing,
+    curvePointCount
+  )
+
   readoutDiv <- div(
 
     readoutBoxes <- checkboxGroupInput(
@@ -71,29 +91,13 @@ addReadoutSelector <- function(readouts) {
       choiceValues = readoutBoxIds,
       inline = T
     ),
-    colorDiv
+    colorDiv,
+    extraParamsDiv
   )
 
-  # now the extra controls
+  return(readoutDiv)
 
-  # point size
-  # line weight
-  # plot aspect ratio (x (conc), y(response), z(curve position))
-  # curve resolution 25, slider
-  # lineWeight 1.0
-  # antialising, smoothing curves F
-
-  # consideration of managing process
-
-  # phase 1 is to read the input to be able to set initial UI values
-  # Can we capture and keep the generated data in the core class as a data object?
-  # So process / update with a button
-  # if core data is null, then update will create data, then plot
-  # if data exists, update will just re-plot with desired params.
-
-  # need a method to collect parameters and replot
-  # need to be able to generate a plot in the main panel.
-}
+ }
 
 
 
