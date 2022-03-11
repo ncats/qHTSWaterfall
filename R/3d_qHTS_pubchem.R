@@ -1,25 +1,5 @@
 # THE PURPOSE OF THIS PROGRAM IS TO TAKE A .CSV FILE AND CREATE A 3D WATERFALL PLOT
-#Loading libraries -------------------------------------------------------------
-# library(rgl)
-# library(stringr)
-# library(dplyr)
-# library(tidyr)
 
-#Checking for existence of RGL Package -----------------------------------------
-# avail <- installed.packages()
-# pack <- avail[,1]
-# if(is.element("rgl",pack) == FALSE){
-#   install.packages("rgl", type = "binary")
-# }
-# if(is.element("stringr", pack) == FALSE){
-#   install.packages("stringr")
-# }
-# if(is.element("dplyr", pack) == FALSE){
-#   install.packages("stringr")
-# }
-# if(is.element("tidyr", pack) == FALSE){
-#   install.packages("stringr")
-# }
 
 extractReadoutColumns <- function(colList, readout, colKey) {
   cols <- colList[grep(colKey, colList)]

@@ -13,10 +13,12 @@ plotWaterfall(
   inactiveColor = "gray",
   alpha = 1,
   pointSize = 2,
+  lineWeight = 1,
   plotInactivePoints = T,
   curveResolution = 25,
   plotAspectRatio = c(1, 1, 3),
-  lineWeight = 1
+  antialiasSmoothing = F,
+  returnPlotObject = F
 )
 }
 \arguments{
@@ -38,6 +40,8 @@ The order should match the activityReadoutsList order.}
 
 \item{pointSize}{relative size of plotted points, default = 2}
 
+\item{lineWeight}{thickness of fitted curves. Default thickness is 1.0. Decimal numbers are permitted.}
+
 \item{plotInactivePoints}{TRUE will plot inactive data as datapoints, FALSE Will hide inactive data.}
 
 \item{curveResolution}{value between 25 and 250, number of points to define dose-response curves.
@@ -46,7 +50,10 @@ Fewer points renders as connected straight lines.}
 \item{plotAspectRatio}{relative sizes of concentration axis (x), response axis (y), and waterfall width (z).
 Input as list, derault: c(1, 1, 3)}
 
-\item{lineWeight}{thickness of fitted curves. Default thickness is 1.0. Decimal numbers are permitted.}
+\item{antialiasSmoothing}{smooths plot line rendering. Default is FALSE. Setting as TRUE will smooth lines, but may slow response during re-drawing plot.}
+
+\item{returnPlotObject}{if True, it returns an rgl 'scene' object that can be plotted using 'rgl::plot3d()'.
+If FALSE, the default value, this function opens and rgl plot window for plotting.}
 }
 \description{
 Plots 3D qHTS waterfall plot, given Pubchem activity file or NCATS qHTS format file.
@@ -85,7 +92,8 @@ plotWaterfall(
   alpha = 1,
   plotInactivePoints = F,
   curveResolution = 100,
-  plotAspectRatio = c(2,2,5)
+  plotAspectRatio = c(2,2,5),
+  returnPlotObject = F
   )
 }
 }
