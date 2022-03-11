@@ -93,6 +93,12 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
                            inactiveColor='gray', alpha=1, pointSize=2.0, plotInactivePoints=T, curveResolution=25,
                           plotAspectRatio=c(1,1,3), lineWeight=1.0, antialiasSmoothing = F) {
 
+  plotPoints = T
+  if(pointSize == 0) {
+    plotPoints = F
+  }
+  print("plotPoints???")
+  print(plotPoints)
   ## Put in checks
 
   #activity readouts, should have an equal or greater numbrer of point and curve colors
@@ -603,18 +609,21 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
   # Pop-up window size
   #newWindowRect = c(138, 161, 886, 760)
 
-  newWindowRect = c(138, 161, 886, 760)
+  #newWindowRect = c(138, 161, 938, 661)
 
-
+  newWindowRect = c(0, 0, 1000, 1000)
   #SCALING THE 3D WINDOW ---------------------------------------------------------
   #scale=c(concentration, %, #samples),  #
-  rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect, silent=T)
+  my3d <- rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect, silent=T, useNULL = T)
+
 
 
 
 
   #PLOTTING POINTS IN 3D GRAPH ---------------------------------------------------
   start = Sys.time()
+
+  if(plotPoints) {
   totPointsProcessed = 0
   for(i in 1:length(waterfallPoints))
   {
@@ -624,7 +633,7 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
     # rgl::spheres3d(x=m$x, y=m$y, z=m$z, col = currentColor, radius = pointSize)
     totPointsProcessed = totPointsProcessed + 1
   }
-
+}
 
   # for(i in waterfall_POINTS_data_2$x)
   # {
@@ -680,6 +689,7 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
 #   wid <- rgl::rglwidget(webgl=T)
 #   wid
 
+  return(scene3d())
 }
 
 

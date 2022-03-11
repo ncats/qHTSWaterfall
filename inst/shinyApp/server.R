@@ -23,25 +23,20 @@ addReadoutSelector <- function(readouts) {
 
     colorNum = colorNum + 1
 
-    #    colourInput(inputreadout, "Choose color:", "cornflowerblue")
-    # choices = c("steelblue", "cornflowerblue",
-    #             "firebrick", "palegoldenrod",
-    #             "forestgreen")
     cDiv <- div(id=paste0(readout,"-readout-color-div"),
-    readoutColor <- colourpicker::colourInput(
-      inputId = paste0(readout,'-line-color'), label = paste0(readout," line color:"),
-      value = colorVal
-    ),
-    #colorChoosers[[paste0(readout,'-line-color')]] <- readoutColor
+                readoutColor <- colourpicker::colourInput(
+                  inputId = paste0(readout,'-line-color'), label = paste0(readout," line color:"),
+                  value = colorVal
+                ),
+                #colorChoosers[[paste0(readout,'-line-color')]] <- readoutColor
 
-    readoutColor <- colourpicker::colourInput(
-      inputId = paste0(readout,'-point-color'), label = paste0(readout," point color:"),
-      value = colorVal
-    )
-    #colorChoosers[[paste0(readout,'-point-color')]] <- readoutColor
+                readoutColor <- colourpicker::colourInput(
+                  inputId = paste0(readout,'-point-color'), label = paste0(readout," point color:"),
+                  value = colorVal
+                )
+                #colorChoosers[[paste0(readout,'-point-color')]] <- readoutColor
     )
     colorChoosers[[paste0(readout,"-readout-color-div")]] <- cDiv
-
   }
 
   plotInactivePoints <- div(id="plot-inactives-div",
@@ -59,7 +54,7 @@ addReadoutSelector <- function(readouts) {
 
   colorDiv <- div(id="color-controls-div", colorChoosers)
 
-  concTextBox <- textAreaInput(inputId="concTextArea",label="Log Molar Conc. Values(lowest to highest, one per line or comma separated)",cols=12, rows=15)
+  concTextBox <- textAreaInput(inputId="concTextArea",label="Log Molar Conc. Values(lowest to highest, one per row or comma separated)",cols=8, rows=15)
   pointSize <- sliderInput(inputId = "pointSize", label="Point Size [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T)
   lineWeight <- sliderInput(inputId = "lineWeight", label="Line Weight [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T)
   aspectX <- selectInput(inputId="aspectX", label="X (conc.) size ratio", choices=c(1:10), selected=1)
@@ -68,19 +63,18 @@ addReadoutSelector <- function(readouts) {
   antiAliasing <- checkboxInput(inputId="antialias", label="Antialias/Smooth Lines",value=T)
   curvePointCount <- selectInput(inputId="curvePoints", label="Number of points to define curve fits.", choices=c(seq(25,250,25)), selected=100)
 
-  extraParamsDiv <- div(
-    concTextBox,
-    pointSize,
-    lineWeight,
-    aspectX,
-    aspectY,
-    aspectZ,
-    antiAliasing,
-    curvePointCount
+  extraParamsDiv <- div( class='param_div',
+                         concTextBox,
+                         pointSize,
+                         lineWeight,
+                         aspectX,
+                         aspectY,
+                         aspectZ,
+                         antiAliasing,
+                         curvePointCount
   )
 
   readoutDiv <- div(
-
     readoutBoxes <- checkboxGroupInput(
       inputId = 'readoutCollection',
       label = 'Select Readouts to Plot',
@@ -97,12 +91,103 @@ addReadoutSelector <- function(readouts) {
 
   return(readoutDiv)
 
- }
+}
 
+collectParameters <- function(input, output) {
 
+  inputFile <- input$inputFile$datapath
+
+  readouts <- input$readoutCollection
+  readouts <- gsub('-readout-checkbox', "", readouts)
+
+  if(length(readouts)==0) {
+    print("Message, Need to select at least one readout?")
+    showModal(modalDialog(h4("Need to select to plot at least one readout."),title="Missing Selected Readouts"))
+    return(NULL)
+  } else {
+    pointColors <- c()
+    lineColors <- c()
+    for(readout in readouts) {
+      lineColorTag = paste0(readout, "-line-color")
+      pointColorTag = paste0(readout,"-point-color")
+      lineColors <- c(lineColors, input[[lineColorTag]])
+      pointColors <- c(pointColors, input[[pointColorTag]])
+    }
+
+    plotInactives <- input[['plot-inactives-checkbox']]
+    print(plotInactives)
+    if(plotInactives) {
+      inactiveColor = input[['inactive-point-color']]
+    } else {
+      inactiveColor = 'gray'
+    }
+
+    #concentrations
+    concText <- input$concTextArea
+    print(concText)
+
+    if(length(grep(',',concText)) > 0) {
+      concVals <- strsplit(concText, ",")
+    } else {
+      concVals <- strsplit(concText, "\n")
+    }
+
+    if(!is.null(concVals)) {
+      concVals <- unlist(concVals)
+    }
+
+    if(!is.null(concVals) && length(concVals) > 1) {
+      concValues <- trimws(concVals)
+      concVals <- as.numeric(concVals)
+      naCount <- sum(is.na(concVals))
+      if(naCount > 0) {
+        vOrVs <- ' value'
+        if(naCount > 1) {
+          vOrVs <- ' values'
+        }
+        print("Message, some concentrations are not numbers.")
+        showModal(modalDialog(h4(paste0("Some concentrations (",naCount,vOrVs,") are not numeric. Please remove/edit incorrect values.")), title="Invalid Concentration Values"))
+        return(NULL)
+      }
+    } else {
+      print("Message, hey we need concentration values?")
+      showModal(modalDialog(h4("Please provide log-molar concentrations for the data set."),title="Missing Concentration Values"))
+      return(NULL)
+    }
+
+    pointSize <- input$pointSize
+    lineWeight <- input$lineWeight
+
+    aspectRatio <-c()
+    aspectRatio <- c(aspectRatio, input$aspectX)
+    aspectRatio <- c(aspectRatio, input$aspectY)
+    aspectRatio <- c(aspectRatio, input$aspectZ)
+    aspectRatio <- as.numeric(unlist(aspectRatio))
+
+    antialias <- input$antialias
+    lineRes <- as.numeric(input$curvePoints)
+
+    props <- list(inputFile = inputFile,
+                  activityReadouts = readouts,
+                  logMolarConcVector = concVals,
+                  pointColors = pointColors,
+                  curveColors = lineColors,
+                  inactiveColor = inactiveColor,
+                  alpha=1,
+                  pointSize = pointSize,
+                  lineWeight = lineWeight,
+                  plotInactivePoints = plotInactives,
+                  curveResolution = lineRes,
+                  plotAspectRatio = aspectRatio)
+
+  }
+  return(props)
+}
 
 server <- function(input, output, session) {
 
+
+  disable(id='plotRefreshBtn')
 
   status <- ""
 
@@ -110,86 +195,116 @@ server <- function(input, output, session) {
 
   observeEvent(input$inputFile, {
 
-    print("event!!!")
-
-    # mytable <- read.csv(input$inputFile$datapath)
-    #
-    # print(dim(mytable))
-    #
     status <<- qHTSWaterfall:::evaluateInputFile(input$inputFile$datapath)
 
     if(length(status$readouts) > 0) {
       insertUI(ui=addReadoutSelector(status$readouts), selector='#inputFile_progress', where='afterEnd')
     }
 
+    enable(id='plotRefreshBtn')
 
-
-   }, ignoreNULL = TRUE)
+  }, ignoreNULL = TRUE)
 
   observeEvent(input[["plot-inactives-checkbox"]],
-                {
-                  print("in inactives listener...")
-                    if((input[["plot-inactives-checkbox"]])) {
-                      shinyjs::show('inactive-color-div')
-                    } else {
-                      shinyjs::hide('inactive-color-div',anim=T, time=0.25)
-                    }
-                }
-                ,ignoreInit=TRUE)
+               {
+                 print("in inactives listener...")
+                 if((input[["plot-inactives-checkbox"]])) {
+                   shinyjs::show('inactive-color-div')
+                 } else {
+                   shinyjs::hide('inactive-color-div',anim=T, time=0.25)
+                 }
+               }
+               ,ignoreInit=TRUE)
 
   observeEvent(input$readoutCollection, {
 
-      if(is.null(input$readoutCollection)) {
-        return
+    if(is.null(input$readoutCollection)) {
+      return
+    }
+
+    vals <- input$readoutCollection
+
+    print("base readouts")
+    print(status$readouts)
+    # fluc nluc
+
+    print("checkbox values")
+    print(vals)
+
+    # need to assess current selections, and add back as needed
+    for(readout in vals) {
+      readout <- gsub("-readout-checkbox", "", readout)
+      print("In insertUI testing... readout=")
+      #print(readout)
+      currId <- paste0(readout, "-readout-color-div")
+      shinyjs::show(currId)
+    }
+
+
+
+    toDisable <- c()
+    if(is.null(vals)) {
+      for(readout in status$readouts) {
+        toDisable <- c(toDisable, paste0(readout,'-readout-color-div'))
+
       }
+    } else {
 
-      vals <- input$readoutCollection
+      vals <- gsub('-readout-checkbox', '', vals)
 
-      print("base readouts")
-      print(status$readouts)
-      # fluc nluc
+      offReadouts <- setdiff(status$readouts, vals)
 
-      print("checkbox values")
-      print(vals)
-
-      # need to assess current selections, and add back as needed
-      for(readout in vals) {
-        readout <- gsub("-readout-checkbox", "", readout)
-        print("In insertUI testing... readout=")
-        #print(readout)
-        currId <- paste0(readout, "-readout-color-div")
-        shinyjs::show(currId)
+      for(readout in offReadouts) {
+        toDisable <- c(toDisable, paste0(readout,'-readout-color-div'))
       }
+    }
 
-
-
-      toDisable <- c()
-      if(is.null(vals)) {
-        for(readout in status$readouts) {
-          toDisable <- c(toDisable, paste0(readout,'-readout-color-div'))
-
-        }
-      } else {
-
-        vals <- gsub('-readout-checkbox', '', vals)
-
-        offReadouts <- setdiff(status$readouts, vals)
-
-        for(readout in offReadouts) {
-          toDisable <- c(toDisable, paste0(readout,'-readout-color-div'))
-        }
-      }
-
-      for(control in toDisable) {
-        shinyjs::hide(id=control, anim=T, time=0.5)
-      }
+    for(control in toDisable) {
+      shinyjs::hide(id=control, anim=T, time=0.5)
+    }
 
 
 
   }, ignoreNULL = FALSE, ignoreInit = TRUE)
 
+  observeEvent(input$plotRefreshBtn, {
+    props <- collectParameters(input=input, output=output)
+    #print(str(newPlot))
+    #output[['mainPlot']] <- newPlot
+
+    if(is.null(props)) {
+      return()
+    } else {
+
+      scene <- qHTSWaterfall::plotWaterfall(inputFile = props$inputFile,
+                                            activityReadouts = props$activityReadouts,
+                                            logMolarConcVector = props$logMolarConcVector,
+                                            pointColors = props$pointColors,
+                                            curveColors = props$curveColors,
+                                            inactiveColor = props$inactiveColor,
+                                            alpha=1,
+                                            pointSize = props$pointSize,
+                                            lineWeight = props$lineWeight,
+                                            plotInactivePoints = props$plotInactivePoints,
+                                            curveResolution = props$curveResolution,
+                                            plotAspectRatio = props$plotAspectRatio)
+
+      output$mainPlot <- rgl::renderRglwidget(
+        expr ={
+          scene
+          rgl::rglwidget()
+        }
+      )
+    }
+
+
+
+
+
+  }
+  )
+
 }
-#shinyApp(ui, server)
 
 
 
