@@ -65,6 +65,7 @@ qHTSWaterfall::plotWaterfall(
   alpha = 1,
   plotInactivePoints = F,
   curveResolution = 250,
-  plotAspectRatio = c(2,2,4)
+  plotAspectRatio = c(2,2,4),
+  returnPlotObject = F
 )
 ```

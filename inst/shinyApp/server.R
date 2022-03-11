@@ -28,13 +28,10 @@ addReadoutSelector <- function(readouts) {
                   inputId = paste0(readout,'-line-color'), label = paste0(readout," line color:"),
                   value = colorVal
                 ),
-                #colorChoosers[[paste0(readout,'-line-color')]] <- readoutColor
-
                 readoutColor <- colourpicker::colourInput(
                   inputId = paste0(readout,'-point-color'), label = paste0(readout," point color:"),
                   value = colorVal
                 )
-                #colorChoosers[[paste0(readout,'-point-color')]] <- readoutColor
     )
     colorChoosers[[paste0(readout,"-readout-color-div")]] <- cDiv
   }
@@ -124,7 +121,6 @@ collectParameters <- function(input, output) {
 
     #concentrations
     concText <- input$concTextArea
-    print(concText)
 
     if(length(grep(',',concText)) > 0) {
       concVals <- strsplit(concText, ",")
@@ -178,7 +174,8 @@ collectParameters <- function(input, output) {
                   lineWeight = lineWeight,
                   plotInactivePoints = plotInactives,
                   curveResolution = lineRes,
-                  plotAspectRatio = aspectRatio)
+                  plotAspectRatio = aspectRatio,
+                  returnPlotObject = T)
 
   }
   return(props)
@@ -190,8 +187,6 @@ server <- function(input, output, session) {
   disable(id='plotRefreshBtn')
 
   status <- ""
-
-  #ui <- source(file.path(".","ui.R"), local=T)$value
 
   observeEvent(input$inputFile, {
 
@@ -205,6 +200,8 @@ server <- function(input, output, session) {
 
   }, ignoreNULL = TRUE)
 
+
+
   observeEvent(input[["plot-inactives-checkbox"]],
                {
                  print("in inactives listener...")
@@ -216,6 +213,8 @@ server <- function(input, output, session) {
                }
                ,ignoreInit=TRUE)
 
+
+
   observeEvent(input$readoutCollection, {
 
     if(is.null(input$readoutCollection)) {
@@ -224,23 +223,12 @@ server <- function(input, output, session) {
 
     vals <- input$readoutCollection
 
-    print("base readouts")
-    print(status$readouts)
-    # fluc nluc
-
-    print("checkbox values")
-    print(vals)
-
     # need to assess current selections, and add back as needed
     for(readout in vals) {
       readout <- gsub("-readout-checkbox", "", readout)
-      print("In insertUI testing... readout=")
-      #print(readout)
       currId <- paste0(readout, "-readout-color-div")
       shinyjs::show(currId)
     }
-
-
 
     toDisable <- c()
     if(is.null(vals)) {
@@ -251,7 +239,6 @@ server <- function(input, output, session) {
     } else {
 
       vals <- gsub('-readout-checkbox', '', vals)
-
       offReadouts <- setdiff(status$readouts, vals)
 
       for(readout in offReadouts) {
@@ -262,15 +249,14 @@ server <- function(input, output, session) {
     for(control in toDisable) {
       shinyjs::hide(id=control, anim=T, time=0.5)
     }
+  }, ignoreNULL = FALSE, ignoreInit = TRUE
+  )
 
 
 
-  }, ignoreNULL = FALSE, ignoreInit = TRUE)
 
   observeEvent(input$plotRefreshBtn, {
     props <- collectParameters(input=input, output=output)
-    #print(str(newPlot))
-    #output[['mainPlot']] <- newPlot
 
     if(is.null(props)) {
       return()
@@ -287,7 +273,8 @@ server <- function(input, output, session) {
                                             lineWeight = props$lineWeight,
                                             plotInactivePoints = props$plotInactivePoints,
                                             curveResolution = props$curveResolution,
-                                            plotAspectRatio = props$plotAspectRatio)
+                                            plotAspectRatio = props$plotAspectRatio,
+                                            returnPlotObject = T)
 
       output$mainPlot <- rgl::renderRglwidget(
         expr ={
@@ -296,11 +283,6 @@ server <- function(input, output, session) {
         }
       )
     }
-
-
-
-
-
   }
   )
 

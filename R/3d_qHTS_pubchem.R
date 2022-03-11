@@ -38,13 +38,15 @@ extractReadoutColumns <- function(colList, readout, colKey) {
 #' @param inactiveColor color to display inactive data, default is 'gray'.
 #' @param alpha alpha transparency of the the plot lines, default is 1.0
 #' @param pointSize relative size of plotted points, default = 2
+#' @param lineWeight thickness of fitted curves. Default thickness is 1.0. Decimal numbers are permitted.
 #' @param plotInactivePoints TRUE will plot inactive data as datapoints, FALSE Will hide inactive data.
 #' @param curveResolution value between 25 and 250, number of points to define dose-response curves.
 #' Fewer points renders as connected straight lines.
 #' @param plotAspectRatio relative sizes of concentration axis (x), response axis (y), and waterfall width (z).
 #' Input as list, derault: c(1, 1, 3)
 #' @param antialiasSmoothing smooths plot line rendering. Default is FALSE. Setting as TRUE will smooth lines, but may slow response during re-drawing plot.
-#' @param lineWeight thickness of fitted curves. Default thickness is 1.0. Decimal numbers are permitted.
+#' @param returnPlotObject if True, it returns an rgl 'scene' object that can be plotted using 'rgl::plot3d()'.
+#' If FALSE, the default value, this function opens and rgl plot window for plotting.
 #' @importFrom utils read.csv
 #' @import rgl
 #' @import stringr
@@ -84,14 +86,15 @@ extractReadoutColumns <- function(colList, readout, colKey) {
 #'   alpha = 1,
 #'   plotInactivePoints = F,
 #'   curveResolution = 100,
-#'   plotAspectRatio = c(2,2,5)
+#'   plotAspectRatio = c(2,2,5),
+#'   returnPlotObject = F
 #'   )
 #' }
 #' @export
 plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarConcVector,
                            pointColors=c('darkgreen','royalblue3'), curveColors=c('darkgreen', 'royalblue3'),
-                           inactiveColor='gray', alpha=1, pointSize=2.0, plotInactivePoints=T, curveResolution=25,
-                          plotAspectRatio=c(1,1,3), lineWeight=1.0, antialiasSmoothing = F) {
+                           inactiveColor='gray', alpha=1, pointSize=2.0, lineWeight=1.0, plotInactivePoints=T, curveResolution=25,
+                          plotAspectRatio=c(1,1,3), antialiasSmoothing = F, returnPlotObject = F) {
 
   plotPoints = T
   if(pointSize == 0) {
@@ -611,10 +614,18 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
 
   #newWindowRect = c(138, 161, 938, 661)
 
-  newWindowRect = c(0, 0, 1000, 1000)
+
   #SCALING THE 3D WINDOW ---------------------------------------------------------
   #scale=c(concentration, %, #samples),  #
-  my3d <- rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect, silent=T, useNULL = T)
+  my3d <- ""
+  if(returnPlotObject) {
+    print("returning plot object")
+    newWindowRect = c(0, 0, 1000, 1000)
+    my3d <- rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect, silent=T, useNULL = T)
+  } else {
+    newWindowRect = c(138, 161, 938, 661)
+    rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect)
+  }
 
 
 
@@ -624,15 +635,15 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
   start = Sys.time()
 
   if(plotPoints) {
-  totPointsProcessed = 0
-  for(i in 1:length(waterfallPoints))
-  {
-    m <- waterfallPoints[[i]]
-    currentColor = pointColors[i]
-    rgl::points3d(x=m$x, y=m$y, z=m$z, col = currentColor, size = pointSize)
-    # rgl::spheres3d(x=m$x, y=m$y, z=m$z, col = currentColor, radius = pointSize)
-    totPointsProcessed = totPointsProcessed + 1
-  }
+    totPointsProcessed = 0
+    for(i in 1:length(waterfallPoints))
+    {
+      m <- waterfallPoints[[i]]
+      currentColor = pointColors[i]
+      rgl::points3d(x=m$x, y=m$y, z=m$z, col = currentColor, size = pointSize)
+      # rgl::spheres3d(x=m$x, y=m$y, z=m$z, col = currentColor, radius = pointSize)
+      totPointsProcessed = totPointsProcessed + 1
+    }
 }
 
   # for(i in waterfall_POINTS_data_2$x)
@@ -688,8 +699,10 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
 #
 #   wid <- rgl::rglwidget(webgl=T)
 #   wid
-
-  return(scene3d())
+  if(returnPlotObject) {
+    # on.exit(expr={ close3d() })
+    return(scene3d())
+  }
 }
 
 
