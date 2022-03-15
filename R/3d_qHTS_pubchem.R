@@ -8,7 +8,8 @@ extractReadoutColumns <- function(colList, readout, colKey) {
 }
 
 #' Plots 3D qHTS waterfall plot, given Pubchem activity file or NCATS qHTS format file.
-#' @param inputFile An optional input file path. If none is provided, a file chooser will prompt.
+#' @param inputFile The input file path.
+#' @param fileFormat a required value indicdating the file format. Valid values are 'Generic_qhts' or 'NCATS_qhts'. The value is case-insensitive.
 #' @param activityReadouts Activity data readouts to include in plot
 #' @param logMolarConcVector An optional input list of log molar concentrations, if input is not from PubChem.
 #' @param pointColors color list for activity readout \emph{\bold{data points}}.
@@ -71,7 +72,7 @@ extractReadoutColumns <- function(colList, readout, colKey) {
 #'   )
 #' }
 #' @export
-plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarConcVector,
+plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts = c('Activity'), logMolarConcVector,
                            pointColors=c('darkgreen','royalblue3'), curveColors=c('darkgreen', 'royalblue3'),
                            inactiveColor='gray', alpha=1, pointSize=2.0, lineWeight=1.0, plotInactivePoints=T, curveResolution=25,
                           plotAspectRatio=c(1,1,3), antialiasSmoothing = F, returnPlotObject = F) {
@@ -120,23 +121,6 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
   cdata <- read.csv(ifile, header=TRUE, na.string="null",nrows = 1)
   heads <- colnames(cdata)
 
-  #Checking if input file is from pubchem ----------------------------------------
-  if("PUBCHEM_ACTIVITY_OUTCOME" %in% heads){
-    pubchem_data <- 1
-    # verify the activityReadouts are in the file, if activity readouts are > 1
-    if(length(activityReadouts) > 1) {
-      for(readout in activityReadouts) {
-        if(length(grep(readout, heads)) < 1) {
-          warning(paste0("The following readout is not found in this PubChem file: ",readout))
-          return(NULL)
-        } else {
-          print(paste0("Readout found: ",readout))
-        }
-      }
-    }
-  } else{
-    pubchem_data <- 0
-  }
 
   #Identifying data headers to load ----------------------------------------------
   if(pubchem_data == 1) {
@@ -687,32 +671,93 @@ plotWaterfall <- function(inputFile, activityReadouts = c('Activity'), logMolarC
 
 
 evaluateInputFile <- function(filePath) {
+
+  fileFormats <- c("generic", "ncats_qhts")
+
   status <- list()
-  cdata <- read.csv(filePath, header=TRUE, na.string="null")
-  heads <- colnames(cdata)
-  if("PUBCHEM_ACTIVITY_OUTCOME" %in% heads){
-    status$pubchem <- 1
-    potencyReadouts = heads[grep("Phenotype", heads)]
-    print(potencyReadouts)
-    potencyReadouts <- gsub('Phenotype', '', potencyReadouts)
-    print(potencyReadouts)
-    potencyReadouts <- gsub('\\.', '', potencyReadouts)
-    print(potencyReadouts)
+  status$valid <- TRUE
+
+  formatConcHeader <- scan("data.txt", nlines = 1, what = character())
+  formatConcHeader <- strsplit(formatConcHeader, ",")
+
+  for(i in 1:length(formatConcHeader)) {
+    formatConcHeader[i] <- tolower(trimws(formatConcHeader[i]))
+  }
+
+
+  # error checking
+
+  if(!is.null(formatConcHeader) && length(formatConcHeader) > 3) {
+    formatTag <- formatConcHeader[1]
+    status$fileFormat <- formatConcHeader[2]
+
+    if(formatConcHeader != 'format') {
+      status$valid <- FALSE
+      status$problem <- "The file is missing the 'Format:' tag as the first row and first column."
+      return(status)
+    }
+
+
+    if(!('log_conc_m' %in% fileFormats)) {
+      status$valid <- FALSE
+      status$problem <-"No 'Log_Conc_M' tag. <br>The first row should have this tag and a series of log molar concentrations."
+      return(status)
+    }
   } else {
-    print(dim(cdata))
-    print("NON-pubmed data file!!!")
-    status$pubchem <- 0
-    readoutCol <- heads[grep("Sample.Data.Type", heads)]
-    print("readoutCol")
-    print(readoutCol)
+    status$valid <- FALSE
+    status$problem <- paste0("The first row should contain the 'Format:' tag, a format (generic_qhts or ncats_qhts) <br> and Log Molar concentrations over data columns.<br>
+                       This file only contains ", length(formatConcHeader), " values.")
+    return(status)
+  }
+
+  # Error checking done
+
+  # get log conc vals
+
+    haveLogConcTag
+    concVector <- c()
+    for(header in formatConcHeader) {
+      if(haveLogConcTag) {
+
+        conc <- as.numeric(header)
+
+        if(!is.na(conc)) {
+          concVector <- c(concVector, conc)
+        }
+      }
+      if(tolower(header) == 'log_conc_m') {
+        haveLogConcTag
+      }
+    }
+
+
+  status$logConc <- concVector
+  status$concLength <- length(concVector)
+
+  print(status$logConc)
+  print(status$concLength)
+
+  # skip the first header and read table
+  cdata <- read.csv(filePath, skip=1, header=T, na.string="null")
+  heads <- colnames(cdata)
+
+
+  if(status$fileFormat == 'ncats_qhts') {
+    readOutColName <- "Sample.Data.Type"
+  } else {
+    readOutColName <- "readout"
+  }
+    readoutCol <- heads[grep("Sample.Data.Type", heads, ignore.case = T)]
+
     if(!is.null(readoutCol) && length(readoutCol > 0)) {
        readouts <- unique(cdata[[readoutCol]])
        status$readouts <- readouts
+    } else {
+      status$valid <- FALSE
+      status$problem <- "Can't find a 'Readout' (generic_qhts format) or 'Sample Data Type' (ncats_qhts format) column<br>in the input file. Check column names."
+      return(status)
     }
-    print(status$readouts)
-  }
-  print("pubchem status =")
-  print(status$pubchem)
+
   return(status)
 }
 
