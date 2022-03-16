@@ -51,7 +51,7 @@ addReadoutSelector <- function(readouts) {
 
   colorDiv <- div(id="color-controls-div", colorChoosers)
 
-  concTextBox <- textAreaInput(inputId="concTextArea",label="Log Molar Conc. Values(lowest to highest, one per row or comma separated)",cols=8, rows=15)
+  #concTextBox <- textAreaInput(inputId="concTextArea",label="Log Molar Conc. Values(lowest to highest, one per row or comma separated)",cols=8, rows=15)
   pointSize <- sliderInput(inputId = "pointSize", label="Point Size [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T)
   lineWeight <- sliderInput(inputId = "lineWeight", label="Line Weight [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T)
   aspectX <- selectInput(inputId="aspectX", label="X (conc.) size ratio", choices=c(1:10), selected=1)
@@ -61,7 +61,7 @@ addReadoutSelector <- function(readouts) {
   curvePointCount <- selectInput(inputId="curvePoints", label="Number of points to define curve fits.", choices=c(seq(25,250,25)), selected=100)
 
   extraParamsDiv <- div( class='param_div',
-                         concTextBox,
+                         #concTextBox,
                          pointSize,
                          lineWeight,
                          aspectX,
@@ -90,7 +90,7 @@ addReadoutSelector <- function(readouts) {
 
 }
 
-collectParameters <- function(input, output) {
+collectParameters <- function(input, output, status) {
 
   inputFile <- input$inputFile$datapath
 
@@ -120,36 +120,36 @@ collectParameters <- function(input, output) {
     }
 
     #concentrations
-    concText <- input$concTextArea
-
-    if(length(grep(',',concText)) > 0) {
-      concVals <- strsplit(concText, ",")
-    } else {
-      concVals <- strsplit(concText, "\n")
-    }
-
-    if(!is.null(concVals)) {
-      concVals <- unlist(concVals)
-    }
-
-    if(!is.null(concVals) && length(concVals) > 1) {
-      concValues <- trimws(concVals)
-      concVals <- as.numeric(concVals)
-      naCount <- sum(is.na(concVals))
-      if(naCount > 0) {
-        vOrVs <- ' value'
-        if(naCount > 1) {
-          vOrVs <- ' values'
-        }
-        print("Message, some concentrations are not numbers.")
-        showModal(modalDialog(h4(paste0("Some concentrations (",naCount,vOrVs,") are not numeric. Please remove/edit incorrect values.")), title="Invalid Concentration Values"))
-        return(NULL)
-      }
-    } else {
-      print("Message, hey we need concentration values?")
-      showModal(modalDialog(h4("Please provide log-molar concentrations for the data set."),title="Missing Concentration Values"))
-      return(NULL)
-    }
+    # concText <- input$concTextArea
+    #
+    # if(length(grep(',',concText)) > 0) {
+    #   concVals <- strsplit(concText, ",")
+    # } else {
+    #   concVals <- strsplit(concText, "\n")
+    # }
+    #
+    # if(!is.null(concVals)) {
+    #   concVals <- unlist(concVals)
+    # }
+    #
+    # if(!is.null(concVals) && length(concVals) > 1) {
+    #   concValues <- trimws(concVals)
+    #   concVals <- as.numeric(concVals)
+    #   naCount <- sum(is.na(concVals))
+    #   if(naCount > 0) {
+    #     vOrVs <- ' value'
+    #     if(naCount > 1) {
+    #       vOrVs <- ' values'
+    #     }
+    #     print("Message, some concentrations are not numbers.")
+    #     showModal(modalDialog(h4(paste0("Some concentrations (",naCount,vOrVs,") are not numeric. Please remove/edit incorrect values.")), title="Invalid Concentration Values"))
+    #     return(NULL)
+    #   }
+    # } else {
+    #   print("Message, hey we need concentration values?")
+    #   showModal(modalDialog(h4("Please provide log-molar concentrations for the data set."),title="Missing Concentration Values"))
+    #   return(NULL)
+    # }
 
     pointSize <- input$pointSize
     lineWeight <- input$lineWeight
@@ -163,9 +163,16 @@ collectParameters <- function(input, output) {
     antialias <- input$antialias
     lineRes <- as.numeric(input$curvePoints)
 
+    print("whats the file format...")
+    print(status$fileFormat)
+
+    print("status at the end of collect props")
+    print(status)
+
     props <- list(inputFile = inputFile,
+                  fileFormat = status$fileFormat,
                   activityReadouts = readouts,
-                  logMolarConcVector = concVals,
+                  logMolarConcVector = status$logConc,
                   pointColors = pointColors,
                   curveColors = lineColors,
                   inactiveColor = inactiveColor,
@@ -178,6 +185,11 @@ collectParameters <- function(input, output) {
                   returnPlotObject = T)
 
   }
+
+  print("Props...")
+  print(props)
+
+
   return(props)
 }
 
@@ -190,7 +202,21 @@ server <- function(input, output, session) {
 
   observeEvent(input$inputFile, {
 
+
+    print(input$inputFile)
+    print(input$datapath)
+    print(input$name)
+
     status <<- qHTSWaterfall:::evaluateInputFile(input$inputFile$datapath)
+    print(status$readouts)
+    print(status$valid)
+    print(status$problem)
+
+    if(!status$valid) {
+      showModal(modalDialog(h4(status$problem),title="File Format Problem"))
+      return(NULL)
+    }
+
 
     if(length(status$readouts) > 0) {
       insertUI(ui=addReadoutSelector(status$readouts), selector='#inputFile_progress', where='afterEnd')
@@ -256,13 +282,14 @@ server <- function(input, output, session) {
 
 
   observeEvent(input$plotRefreshBtn, {
-    props <- collectParameters(input=input, output=output)
+    props <- collectParameters(input=input, output=output, status)
 
     if(is.null(props)) {
       return()
     } else {
 
       scene <- qHTSWaterfall::plotWaterfall(inputFile = props$inputFile,
+                                            fileFormat = props$fileFormat,
                                             activityReadouts = props$activityReadouts,
                                             logMolarConcVector = props$logMolarConcVector,
                                             pointColors = props$pointColors,

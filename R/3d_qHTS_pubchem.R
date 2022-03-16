@@ -77,6 +77,26 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
                            inactiveColor='gray', alpha=1, pointSize=2.0, lineWeight=1.0, plotInactivePoints=T, curveResolution=25,
                           plotAspectRatio=c(1,1,3), antialiasSmoothing = F, returnPlotObject = F) {
 
+
+
+
+
+
+  # Dummy test for now...
+  if(fileFormat == 'ncats_qhts') {
+  pubchem_data <- 0
+  } else {
+    pubchem_data <- 0
+  }
+
+
+
+
+
+
+
+
+
   plotPoints = T
   if(pointSize == 0) {
     plotPoints = F
@@ -118,120 +138,24 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   }
 
   #Reading first line of CSV file to detect data type ----------------------------
-  cdata <- read.csv(ifile, header=TRUE, na.string="null",nrows = 1)
+  cdata <- read.csv(ifile, header=TRUE, skip=1, na.string="null",nrows = 1)
   heads <- colnames(cdata)
 
 
   #Identifying data headers to load ----------------------------------------------
-  if(pubchem_data == 1) {
+  if(fileFormat == 'generic_qhts') {
 
     #matching variable names
-    compId <- "PUBCHEM_CID"
-    readout <- "PUBCHEM_ACTIVITY_OUTCOME"
+    compId <- "Comp_ID"
+    readout <- "Readout"
     fit <- "Fit_Output"
-
-    # readout specific column names, unlike NCATS format
-    lac50 <- list()
-    hill <- list()
-    inf <- list()
-    zero <- list()
-    for(currReadout in activityReadouts) {
-      lac50[[currReadout]] <- extractReadoutColumns(heads, currReadout, "Fit_LogAC50")
-      hill[[currReadout]] <- extractReadoutColumns(heads, currReadout, "Fit_HillSlope")
-      inf[[currReadout]] <- extractReadoutColumns(heads, currReadout, "Fit_InfiniteActivity")
-      zero[[currReadout]] <- extractReadoutColumns(heads, currReadout, "Fit_ZeroActivity")
-    }
-
-    #finding the index to start reading
-    finder <- read.csv(ifile, header = TRUE, na.strings = NULL, nrows = 10)
-    skip <- which(finder[1]==1)
-    cdata <- read.csv(ifile, col.names = heads, na.string="null", skip=skip-1)
-
-    heads_len = length(heads)
-    conc <- NULL
-    conc_loc <- NULL
-    a <- 1 #counting
-
-    #Looking for concentration values
-    # find conc for each readout or choose 1
-    concCols <- grep("Activity.at", heads)
-    allConcCols <- heads[concCols]
-
-    concMapping = list()
-
-    # should we verify the length of the concentration vectors???
-    currLength = 0
-    for(currReadout in activityReadouts) {
-      currCols <- grep(currReadout, allConcCols)
-      if(currLength != 0 && currLength != length(currCols)) {
-        print("FYI: Readouts have different length titrations.")
-      }
-      currLength <- length(currCols)
-      concMapping[[currReadout]] <- allConcCols[currCols]
-    }
-
-
-
-    # for(i in 1:heads_len) {
-    #   if(str_starts(heads[i], "Activity.at") == TRUE &
-    #      is.na(cdata[1,i]) == FALSE){
-    #     conc[a] <- heads[i]
-    #     conc_loc[a] <- i
-    #     a <- a+1
-    #   }
-    # }
-
-
-
-
-    concValues = list()
-    concUnits = list()
-
-    #Extracting concentration values for each readout
-    for(currReadout in names(concMapping)) {
-      conc <- concMapping[[currReadout]]
-      x <- NULL
-      y <- NULL
-      # if we have one readout, we have no readout id in column names
-      if(length(activityReadouts) == 1) {
-        for(i in 1:length(conc)) {
-          s <- unlist(strsplit(conc[i], "\\."))
-          x[i] <- str_c(s[3], ".", s[4])
-          y[i] <- s[5]
-        }
-      } else {
-        # we have multiple readouts
-        # the readout id may be anywhere in title
-        # look for '.at.' and split after that
-        # take the next three tokens as conc and conc unit
-        for(i in 1:length(conc)) {
-          #print(conc[i])
-          concData <- substr(conc[i], (str_locate(conc[i], "\\.at\\.")[2]+1), nchar(conc[i]))
-          #print(concData)
-          concData <- unlist(strsplit(concData, "\\."))
-          #print(concData)
-          if(length(concData) > 2) {
-            x[i] <- paste0(concData[1],".",concData[2])
-            y[i] <- substr(concData[3],1,2)
-            #print(x[i])
-            #print(y[i])
-          } else {
-            x[i] <- concData[1]
-            y[i] <- substr(concData[2],1,2)
-            #print(x[i])
-            #print(y[i])
-          }
-        }
-      }
-
-      x <- as.numeric(x)
-      concValues[[currReadout]] <- x
-      concUnits[[currReadout]] <- y
-    }
-
+    lac50 <- "Log_AC50_M"
+    hill <- "Hill_Slope"
+    inf <- "S_Inf"
+    zero <- "S_0"
 
   } else {
-    cdata <- read.csv(ifile, header=TRUE, na.string="null")
+    cdata <- read.csv(ifile, header=TRUE, skip=1, na.string="null")
     #matching variable names
     compId <- "Sample.ID"
     fit <- "Fit_Output"
@@ -240,7 +164,6 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     hill <- "Hill.Coef"
     inf <- "Inf.Activity"
     zero <- "Zero.Activity"
-
 
   }
 
@@ -313,6 +236,9 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
         }
       }
     } else {
+
+      print("Hey I don't have fit_output.................................................................................................")
+
       for (i in 1:nrow(cdata)){
         if(cdata[i,readout] %in% keyReadouts) {
           #if(cdata[i,readout]==keyword_1 || cdata[i,readout]==keyword_2){
@@ -323,6 +249,10 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
       }
     }
   }
+
+
+
+  print("HEY!!!! just before making data points....")
 
 
   # need to capture the list of data for each readout
@@ -593,6 +523,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
 
 
 
+  # rgl::rgl.material(smooth=TRUE, line_antialias=antialiasSmoothing)
 
 
   #PLOTTING POINTS IN 3D GRAPH ---------------------------------------------------
@@ -605,7 +536,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
       m <- waterfallPoints[[i]]
       currentColor = pointColors[i]
       rgl::points3d(x=m$x, y=m$y, z=m$z, col = currentColor, size = pointSize)
-      # rgl::spheres3d(x=m$x, y=m$y, z=m$z, col = currentColor, radius = pointSize)
+      #rgl::spheres3d(x=m$x, y=m$y, z=m$z, col = currentColor, radius = pointSize)
       totPointsProcessed = totPointsProcessed + 1
     }
 }
@@ -649,12 +580,32 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
 
 
   # Adding Grid lines
-  rgl::grid3d(side=c("x","y","z+"))
+  #rgl::grid3d(side=c("x","y","z+"))
 
 
-  rgl::axes3d(expand = 1.03, box = FALSE, xunit = 'pretty', yunit = "pretty", zunit = 'pretty')
 
 
+  rgl::grid3d(side=c("x--","y--","z+-"))
+
+  rgl::axes3d(expand = 1.03, box = T, xunit = 6, yunit = "pretty", zunit = 'pretty', nticks = 6,
+             xlab="Log(conc),M", ylab="Response", zlab="Comp", edges=c("x--","y--","z+-"), floating=TRUE)
+
+  #rgl::rgl.bbox(color="lightgray")
+#
+#   rgl::bbox3d(expand = 1.03, box = F, labels=T, xunit = "pretty", yunit = "pretty", zunit = 'pretty', nticks = 6,
+#               xlab="Log(conc),M", ylab="Response", zlab="Comp", edges=c("x--","y--","z+-"), floating=TRUE,
+#               color=c("lightgray", "black"))
+
+  rgl::grid3d(side=c("x--","y--","z+-"))
+
+  #rgl::axes3d(expand = 1.03, box = FALSE, nticks = 6,
+  #            xlab="Log(conc),M", ylab="Response", zlab="", edges=c("x","y","z+"))
+
+  #rgl::axes3d(color="lightgray", expand = 1.03, box = FALSE, xunit = 'pretty', yunit = "pretty", zunit = 'pretty', marklen=15.0, marklen.rel=F)
+
+  #rgl::axes3d(expand = 1.03, box = FALSE, xunit = 'pretty', yunit = "pretty", zunit = 'pretty', marklen=15.0, marklen.rel=F)
+
+  # rgl::rgl.bg(sphere = TRUE, fogtype = "exp", )
   # edges = c("x--", "y--", "z--")
 
   #rgl::rgl.viewpoint(zoom=0.8, userMatrix = newMatrix)
@@ -666,24 +617,38 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   if(returnPlotObject) {
     # on.exit(expr={ close3d() })
     return(scene3d())
+  } else {
+    rgl.bringtotop()
   }
+
 }
 
 
 evaluateInputFile <- function(filePath) {
+
+  print("In evalu file")
+  print(filePath)
 
   fileFormats <- c("generic", "ncats_qhts")
 
   status <- list()
   status$valid <- TRUE
 
-  formatConcHeader <- scan("data.txt", nlines = 1, what = character())
-  formatConcHeader <- strsplit(formatConcHeader, ",")
+  formatConcHeader <- scan(filePath, nlines = 1, what = character())
+
+  print("Finished scan of file...")
+
+
+  print(formatConcHeader)
+  formatConcHeader <- unlist(strsplit(formatConcHeader, ","))
+  print(formatConcHeader)
+
 
   for(i in 1:length(formatConcHeader)) {
     formatConcHeader[i] <- tolower(trimws(formatConcHeader[i]))
   }
 
+  print(formatConcHeader)
 
   # error checking
 
@@ -691,18 +656,21 @@ evaluateInputFile <- function(filePath) {
     formatTag <- formatConcHeader[1]
     status$fileFormat <- formatConcHeader[2]
 
-    if(formatConcHeader != 'format') {
+    if(formatTag != 'format') {
       status$valid <- FALSE
       status$problem <- "The file is missing the 'Format:' tag as the first row and first column."
       return(status)
     }
 
 
-    if(!('log_conc_m' %in% fileFormats)) {
+    if(!('log_conc_m' %in% formatConcHeader)) {
       status$valid <- FALSE
       status$problem <-"No 'Log_Conc_M' tag. <br>The first row should have this tag and a series of log molar concentrations."
       return(status)
     }
+
+    # made it through... so far....
+
   } else {
     status$valid <- FALSE
     status$problem <- paste0("The first row should contain the 'Format:' tag, a format (generic_qhts or ncats_qhts) <br> and Log Molar concentrations over data columns.<br>
@@ -713,8 +681,7 @@ evaluateInputFile <- function(filePath) {
   # Error checking done
 
   # get log conc vals
-
-    haveLogConcTag
+    haveLogConcTag <- FALSE
     concVector <- c()
     for(header in formatConcHeader) {
       if(haveLogConcTag) {
@@ -726,7 +693,7 @@ evaluateInputFile <- function(filePath) {
         }
       }
       if(tolower(header) == 'log_conc_m') {
-        haveLogConcTag
+        haveLogConcTag = TRUE
       }
     }
 
@@ -741,13 +708,20 @@ evaluateInputFile <- function(filePath) {
   cdata <- read.csv(filePath, skip=1, header=T, na.string="null")
   heads <- colnames(cdata)
 
+  print("file format")
+  print(status$fileFormat)
+  print(heads)
 
   if(status$fileFormat == 'ncats_qhts') {
-    readOutColName <- "Sample.Data.Type"
+    readoutColName <- "Sample.Data.Type"
   } else {
-    readOutColName <- "readout"
+    readoutColName <- "Readout"
   }
-    readoutCol <- heads[grep("Sample.Data.Type", heads, ignore.case = T)]
+
+  print("readout col")
+  print(readoutColName)
+
+    readoutCol <- heads[grep(readoutColName, heads, ignore.case = T)]
 
     if(!is.null(readoutCol) && length(readoutCol > 0)) {
        readouts <- unique(cdata[[readoutCol]])
