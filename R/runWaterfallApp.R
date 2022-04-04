@@ -12,3 +12,4 @@ runQHTSWaterfallApp <- function() {
   appDir <- system.file("shinyApp",package = "qHTSWaterfall")
   shiny::runApp(appDir, display.mode = "normal", test.mode = F, quiet = T, host="127.0.0.1")
 }
+

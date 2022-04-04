@@ -288,7 +288,7 @@ server <- function(input, output, session) {
       return()
     } else {
 
-      scene <- qHTSWaterfall::plotWaterfall(inputFile = props$inputFile,
+      p <- qHTSWaterfall::plotWaterfall(inputFile = props$inputFile,
                                             fileFormat = props$fileFormat,
                                             activityReadouts = props$activityReadouts,
                                             logMolarConcVector = props$logMolarConcVector,
@@ -302,13 +302,14 @@ server <- function(input, output, session) {
                                             curveResolution = props$curveResolution,
                                             plotAspectRatio = props$plotAspectRatio,
                                             returnPlotObject = T)
+      output$mainPlot <- plotly::renderPlotly(p)
 
-      output$mainPlot <- rgl::renderRglwidget(
-        expr ={
-          scene
-          rgl::rglwidget()
-        }
-      )
+      # output$mainPlot <- rgl::renderRglwidget(
+      #   expr ={
+      #     scene
+      #     rgl::rglwidget()
+      #   }
+      # )
     }
   }
   )

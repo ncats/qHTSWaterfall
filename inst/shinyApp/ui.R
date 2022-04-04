@@ -75,11 +75,14 @@ shinyUI(fluidPage(
                        'Plot / Refresh'),
         div(
           id = "mainPlotDiv",
-          rgl::rglwidgetOutput(
-            outputId = "mainPlot",
-            width = '100%',
-            height = '600px'
-          )
+          plotly::plotlyOutput(outputId = "mainPlot",
+                               width = '100%',
+                               height = '600px')
+          # rgl::rglwidgetOutput(
+          #   outputId = "mainPlot"
+          #   #width = '100%',
+          #   #height = '600px'
+          # )
         )
       )
     ),

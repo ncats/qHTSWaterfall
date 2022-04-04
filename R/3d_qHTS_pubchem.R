@@ -74,8 +74,11 @@ extractReadoutColumns <- function(colList, readout, colKey) {
 #' @export
 plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts = c('Activity'), logMolarConcVector,
                            pointColors=c('darkgreen','royalblue3'), curveColors=c('darkgreen', 'royalblue3'),
-                           inactiveColor='gray', alpha=1, pointSize=2.0, lineWeight=1.0, plotInactivePoints=T, curveResolution=25,
-                          plotAspectRatio=c(1,1,3), antialiasSmoothing = F, returnPlotObject = F) {
+                           inactiveColor='gray', alpha=1, pointSize=1.0, lineWeight=1.5, plotInactivePoints=T, curveResolution=25,
+                          plotAspectRatio=c(1,1,3), antialiasSmoothing = F, returnPlotObject = F,
+                          axisTitles = list(concTitle="log2[Conc], M", respTitle="Response", curveTitle=""),
+                          planeColors = list(basePlaneColor="#b8b6b6", rightPlaneColor="#999494", leftPlaneColor="#6e6868"),
+                          gridColor = "#ffff", showCurveNumberLabels = TRUE, concAxisConfig = NULL, responseAxisConfig = NULL) {
 
 
 
@@ -90,8 +93,11 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   }
 
 
-
-
+  # aspect ratio... note plotly switches y and z relative to our notion, hence the indices swap on assignment
+  aspect <- list()
+  aspect[['x']] <- plotAspectRatio[1]
+  aspect[['y']] <- plotAspectRatio[3]
+  aspect[['z']] <- plotAspectRatio[2]
 
 
 
@@ -491,135 +497,193 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   # using user's mouse
 
   # graph view coordinates
-  newMatrix = t(matrix(c(-0.6416085, 0.01792431, -0.7668231,  0, -0.1346225, 0.98157728,  0.1355843,  0,
-                         0.7551258, 0.19022357, -0.6273754,  0, 0.0000000, 0.00000000,  0.0000000,  1),
-                       ncol = 4, nrow =4))
-
-  # newMatrix = t(matrix(c(-0.6416085, 0.01792431, -0.9668231,  0, -0.1346225, 0.98157728,  0.1355843,  0,
-  #                        0.7551258, 0.19022357, -0.6273754,  0, 0.00000000, 0.00000000,  0.0000000,  1),
-  #                      ncol = 4, nrow =4))
 
 
-  # Matrix was transposed since f(matrix) always reads y1,y2,y3,y4
-  # col first then rows
+  # Plotly...
+  resIndex = 1
 
-  # Pop-up window size
-  #newWindowRect = c(138, 161, 886, 760)
-
-  #newWindowRect = c(138, 161, 938, 661)
-
-
-  #SCALING THE 3D WINDOW ---------------------------------------------------------
-  #scale=c(concentration, %, #samples),  #
-  my3d <- ""
-  if(returnPlotObject) {
-    print("returning plot object")
-    newWindowRect = c(0, 0, 1000, 1000)
-    my3d <- rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect, silent=T, useNULL = T)
-  } else {
-    newWindowRect = c(138, 161, 938, 661)
-    rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect)
-  }
-
-
-
-  # rgl::rgl.material(smooth=TRUE, line_antialias=antialiasSmoothing)
-
-
-  #PLOTTING POINTS IN 3D GRAPH ---------------------------------------------------
-  start = Sys.time()
-
-  if(plotPoints) {
-    totPointsProcessed = 0
-    for(i in 1:length(waterfallPoints))
-    {
-      m <- waterfallPoints[[i]]
-      currentColor = pointColors[i]
-      rgl::points3d(x=m$x, y=m$y, z=m$z, col = currentColor, size = pointSize)
-      #rgl::spheres3d(x=m$x, y=m$y, z=m$z, col = currentColor, radius = pointSize)
-      totPointsProcessed = totPointsProcessed + 1
+  # prepare lines data
+  for(n in names(waterfallLines)) {
+    d <- waterfallLines[[n]]
+    d$readout <- n
+    d2 <- waterfallPoints[[n]]
+    d2$readout <- n
+    if(resIndex == 1) {
+      wfl <- d
+      wfp <- d2
+    } else {
+      wfl <- rbind(wfl, d)
+      wfp <- rbind(wfp, d2)
     }
-}
-
-  # for(i in waterfall_POINTS_data_2$x)
-  # {
-  #   rgl::points3d(x=waterfall_POINTS_data_2$x[i],y=waterfall_POINTS_data_2$y[i],
-  #                 z=waterfall_POINTS_data_2$z[i], col = col_2,
-  #                 size = 0.5)
-  #   break
-  # }
-
-  #PLOTTING LINES IN 3D GRAPH ----------------------------------------------------
-  # for(i in waterfall)
-  # {
-  #   rgl::lines3d(waterfall_LINES_data_1[i],col = col_3, alpha = alpha_1)
-  # }
-
-  #rgl::rgl.material(point_antialias = F, line_antialias = antialiasSmoothing)
-
-  for(i in 1:length(waterfallLines))
-  {
-    m <- waterfallLines[[i]]
-    currentColor = lineColors[i]
-    rgl::lines3d(x=m$x, y=m$y, z=m$z, col = currentColor, alpha=alpha_1, lwd=lineWeight)
+    resIndex = resIndex + 1
   }
 
+  resIndex = 1
+  if(plotInactivePoints) {
+    d <- waterfallPoints[['inactive']]
+    d$readout <- 'inactive'
+    wfp <- rbind(wfp, d)
+  }
 
+  #get the color palettes set...
+  linePal <- lineColors
+  linePal <- setNames(linePal, activityReadouts)
 
-
-
-  # for(i in waterfall_LINES_data_2$x)
-  # {
-  #   rgl::lines3d(waterfall_LINES_data_2[i],col = col_3, alpha = alpha_1)
-  #   break
-  # }
-
-  #CREATE BOX AROUND EDGES FOR THE GRAPH -----------------------------------------
-
-  rgl::aspect3d(plotAspectRatio[1],plotAspectRatio[2],plotAspectRatio[3])
-
-
-  # Adding Grid lines
-  #rgl::grid3d(side=c("x","y","z+"))
-
-
-
-
-  rgl::grid3d(side=c("x--","y--","z+-"))
-
-  rgl::axes3d(expand = 1.03, box = T, xunit = 6, yunit = "pretty", zunit = 'pretty', nticks = 6,
-             xlab="Log(conc),M", ylab="Response", zlab="Comp", edges=c("x--","y--","z+-"), floating=TRUE)
-
-  #rgl::rgl.bbox(color="lightgray")
-#
-#   rgl::bbox3d(expand = 1.03, box = F, labels=T, xunit = "pretty", yunit = "pretty", zunit = 'pretty', nticks = 6,
-#               xlab="Log(conc),M", ylab="Response", zlab="Comp", edges=c("x--","y--","z+-"), floating=TRUE,
-#               color=c("lightgray", "black"))
-
-  rgl::grid3d(side=c("x--","y--","z+-"))
-
-  #rgl::axes3d(expand = 1.03, box = FALSE, nticks = 6,
-  #            xlab="Log(conc),M", ylab="Response", zlab="", edges=c("x","y","z+"))
-
-  #rgl::axes3d(color="lightgray", expand = 1.03, box = FALSE, xunit = 'pretty', yunit = "pretty", zunit = 'pretty', marklen=15.0, marklen.rel=F)
-
-  #rgl::axes3d(expand = 1.03, box = FALSE, xunit = 'pretty', yunit = "pretty", zunit = 'pretty', marklen=15.0, marklen.rel=F)
-
-  # rgl::rgl.bg(sphere = TRUE, fogtype = "exp", )
-  # edges = c("x--", "y--", "z--")
-
-  #rgl::rgl.viewpoint(zoom=0.8, userMatrix = newMatrix)
-
-
-#
-#   wid <- rgl::rglwidget(webgl=T)
-#   wid
-  if(returnPlotObject) {
-    # on.exit(expr={ close3d() })
-    return(scene3d())
+  pointPal <- pointColors
+  if(plotInactivePoints) {
+    pointPal <- setNames(pointPal, c(activityReadouts, 'inactive'))
   } else {
-    rgl.bringtotop()
+    pointPal <- setNames(pointPal, activityReadouts)
   }
+
+
+
+  # right verical plane
+  # default #999494
+  axx <- list(
+    title = axisTitles[['concTitle']],
+    backgroundcolor=planeColors[['rightPlaneColor']],
+    gridcolor=gridColor,
+    zerolinecolor=gridColor,
+    showbackground = T,
+    showspikes=F,
+    hovertext='skip',
+    ticks='outside'
+  )
+
+  # left vertical plane
+  # #6e6868
+  axy <- list(
+    title = axisTitles[['curveTitle']],
+    autorange='reversed',
+    backgroundcolor=planeColors[['leftPlaneColor']],
+    gridcolor=gridColor,
+    zerolinecolor=gridColor,
+    showbackground = T,
+    showspikes=F,
+    showticklabels = showCurveNumberLabels
+  )
+
+  # base plane
+  # default #b8b6b6
+  axz <- list(
+    title = axisTitles[['respTitle']],
+    backgroundcolor=planeColors[['basePlaneColor']],
+    gridcolor=gridColor,
+    zerolinecolor=gridColor,
+    showbackground = T,
+    showspikes=F,
+    ticks='outside'
+  )
+
+  if(!is.null(responseAxisConfig)) {
+    axz[['autotick']] <- F
+    axz[['tickmode']] <- 'linear'
+    axz[['range']] <- list(responseAxisConfig$min, responseAxisConfig$max)
+    #axz[['nticks']] <- responseAxisConfig$nTics
+    axz[['tick0']] <- responseAxisConfig$firstTick
+    axz[['dtick']] <- responseAxisConfig$tickSizeVal
+    #axz[['dtickrange']] <- list(-400, NULL)
+  }
+
+  if(!is.null(responseAxisConfig)) {
+    axz[['autotick']] <- F
+    axz[['tickmode']] <- 'linear'
+    axz[['range']] <- list(responseAxisConfig$min, responseAxisConfig$max)
+    axz[['tick0']] <- responseAxisConfig$firstTick
+    axz[['dtick']] <- responseAxisConfig$tickSizeVal
+  }
+
+  if(!is.null(concAxisConfig)) {
+    axx[['autotick']] <- F
+    axx[['tickmode']] <- 'linear'
+    axx[['range']] <- list(concAxisConfig$min, concAxisConfig$max)
+    axx[['tick0']] <- concAxisConfig$firstTick
+    axx[['dtick']] <- concAxisConfig$tickSizeVal
+  }
+
+
+  if(showCurveNumberLabels) {
+    axy[['ticks']] <- 'outside'
+  }
+
+  p <- plot_ly(wfl, x=~x, y=~z, z=~y, color=~readout, colors=linePal) %>% group_by(readout)
+  p <- p %>% layout(scene = list(aspectratio = aspect,
+                                 xaxis=axx, yaxis=axy, zaxis=axz,
+                                 camera = list(eye = list(x = 2.25, y = 2.25, z = 0.3))
+                                 ))
+  p <- p %>% add_lines(line=list(width=lineWeight)) %>% style(hoverinfo='none')
+
+  p <- p %>% plotly::add_trace(x=~wfp$x, y=~wfp$z, z=~wfp$y, color=~wfp$readout, colors=pointPal,
+                                 type='scatter3d', mode='markers', marker = list(size=pointSize), inherit=F)
+
+  return(p)
+
+
+  #camera = list(eye = list(x = 1.25, y = 1.25, z = 1.25))
+
+  # rgl code
+
+#   newMatrix = t(matrix(c(-0.6416085, 0.01792431, -0.7668231,  0, -0.1346225, 0.98157728,  0.1355843,  0,
+#                          0.7551258, 0.19022357, -0.6273754,  0, 0.0000000, 0.00000000,  0.0000000,  1),
+#                        ncol = 4, nrow =4))
+#
+#   my3d <- ""
+#   if(returnPlotObject) {
+#     print("returning plot object")
+#     newWindowRect = c(0, 0, 1000, 1000)
+#     my3d <- rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect, silent=T, useNULL = T)
+#   } else {
+#     newWindowRect = c(138, 161, 938, 661)
+#     rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect)
+#   }
+#
+#   #PLOTTING POINTS IN 3D GRAPH ---------------------------------------------------
+#   start = Sys.time()
+#
+#   if(plotPoints) {
+#     totPointsProcessed = 0
+#     for(i in 1:length(waterfallPoints))
+#     {
+#       m <- waterfallPoints[[i]]
+#       currentColor = pointColors[i]
+#       rgl::points3d(x=m$x, y=m$y, z=m$z, col = currentColor, size = pointSize)
+#       #rgl::spheres3d(x=m$x, y=m$y, z=m$z, col = currentColor, radius = pointSize)
+#       totPointsProcessed = totPointsProcessed + 1
+#     }
+#   }
+#
+#
+#   for(i in 1:length(waterfallLines))
+#   {
+#     m <- waterfallLines[[i]]
+#     currentColor = lineColors[i]
+#     rgl::lines3d(x=m$x, y=m$y, z=m$z, col = currentColor, alpha=alpha_1, lwd=lineWeight)
+#   }
+#
+#   #CREATE BOX AROUND EDGES FOR THE GRAPH -----------------------------------------
+#
+#   rgl::aspect3d(plotAspectRatio[1],plotAspectRatio[2],plotAspectRatio[3])
+#
+#   rgl::grid3d(side=c("x--","y--","z+-"))
+#
+#   rgl::axes3d(expand = 1.03, box = T, xunit = 6, yunit = "pretty", zunit = 'pretty', nticks = 6,
+#              xlab="Log(conc),M", ylab="Response", zlab="Comp", edges=c("x--","y--","z+-"), floating=TRUE)
+#
+#
+#   rgl::grid3d(side=c("x--","y--","z+-"))
+#
+#
+#
+# #
+# #   wid <- rgl::rglwidget(webgl=T)
+# #   wid
+#   if(returnPlotObject) {
+#     # on.exit(expr={ close3d() })
+#     return(scene3d())
+#   } else {
+#     rgl.bringtotop()
+#   }
 
 }
 
