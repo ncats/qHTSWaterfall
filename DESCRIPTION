@@ -15,17 +15,17 @@ Authors@R:
            email = "john.braisted@nih.gov")
 Description: Plots 3D qHTS waterfall plot, given Pubchem activity file or NCATS qHTS format file.
 Imports:
-  rlang,
-  utils,
-  rgl,
-  stringr,
-  dplyr,
-  tidyr,
-  shiny,
-  colourpicker,
-  shinyjs,
-  shinydashboard,
-  plotly
+    rlang,
+    utils,
+    rgl,
+    stringr,
+    dplyr,
+    tidyr,
+    shiny,
+    colourpicker,
+    shinyjs,
+    shinydashboard,
+    plotly
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

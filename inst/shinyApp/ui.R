@@ -1,13 +1,13 @@
-library(shiny)
-library(shinyjs)
-
+# library(shiny)
+# library(shinyjs)
+#
 
 shinyUI(fluidPage(
   useShinyjs(),
-
-  tags$style(
-    HTML(
-      "
+  # tags$head(
+  # tags$style(
+  #   HTML(
+     inlineCSS("
       #sidebarPanel {
       }
       #mainLayout {
@@ -40,9 +40,9 @@ shinyUI(fluidPage(
            color: #FFFFFF;
            margin-bottom: 10px;
       }
-    "
-    )
-  ),
+    "),
+  #   )
+  # )),
 
   div(
     id = 'titlePanel',

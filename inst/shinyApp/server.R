@@ -52,26 +52,31 @@ addReadoutSelector <- function(readouts) {
   colorDiv <- div(id="color-controls-div", colorChoosers)
 
   #concTextBox <- textAreaInput(inputId="concTextArea",label="Log Molar Conc. Values(lowest to highest, one per row or comma separated)",cols=8, rows=15)
-  pointSize <- sliderInput(inputId = "pointSize", label="Point Size [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T)
-  lineWeight <- sliderInput(inputId = "lineWeight", label="Line Weight [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T)
-  aspectX <- selectInput(inputId="aspectX", label="X (conc.) size ratio", choices=c(1:10), selected=1)
-  aspectY <- selectInput(inputId="aspectY", label="Y (response) size ratio", choices=c(1:10), selected=1)
-  aspectZ <- selectInput(inputId="aspectZ", label="Z (plot width) size ratio", choices=c(1:10), selected=3)
+  sizeParamDiv <- div(
+  h3("Point Size and Line Weight"),
+  pointSize <- sliderInput(inputId = "pointSize", label="Point Size [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T),
+  lineWeight <- sliderInput(inputId = "lineWeight", label="Line Weight [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T),
+  )
+  aspectRatioDiv <- div(
+  h3("Plot Aspect Ratio"),
+  aspectX <- selectInput(inputId="aspectX", label="X (conc.) size ratio", choices=c(1:10), selected=1),
+  aspectY <- selectInput(inputId="aspectY", label="Y (response) size ratio", choices=c(1:10), selected=1),
+  aspectZ <- selectInput(inputId="aspectZ", label="Z (plot width) size ratio", choices=c(1:10), selected=3),
+  )
   antiAliasing <- checkboxInput(inputId="antialias", label="Antialias/Smooth Lines",value=T)
   curvePointCount <- selectInput(inputId="curvePoints", label="Number of points to define curve fits.", choices=c(seq(25,250,25)), selected=100)
 
   extraParamsDiv <- div( class='param_div',
                          #concTextBox,
-                         pointSize,
-                         lineWeight,
-                         aspectX,
-                         aspectY,
-                         aspectZ,
+                         sizeParamDiv,
+                        aspectRatioDiv,
                          antiAliasing,
                          curvePointCount
   )
 
   readoutDiv <- div(
+    id = 'readout_params',
+    h4("Readout Parameters"),
     readoutBoxes <- checkboxGroupInput(
       inputId = 'readoutCollection',
       label = 'Select Readouts to Plot',
@@ -87,8 +92,70 @@ addReadoutSelector <- function(readouts) {
   )
 
   return(readoutDiv)
-
 }
+
+addPlotCustomization <- function(status) {
+
+  plotParamDiv <- div( id="detail_params",
+                       div(id='plane_colors',
+                           h3("Plot Plane Colors"),
+                           basePlaneColor <- colourpicker::colourInput(
+                             inputId = 'base_plane_color', label = 'base/bottom plane color',
+                             value = "#b8b6b6"
+                           ),
+
+                           leftPlaneColor <- colourpicker::colourInput(
+                             inputId = 'left_plane_color', label = 'left verical plane color',
+                             value = "#6e6868"
+                           ),
+
+                           rigthPlaneColor <- colourpicker::colourInput(
+                             inputId = 'right_plane_color', label = 'right verical plane color',
+                             value = "#999494"
+                           ),
+                           gridColor <- colourpicker::colourInput(
+                             inputId = 'grid_color', label = 'grid color',
+                             value = "#ffffff"
+                           )
+                       ),
+                       div(id = 'range_div',
+                           h3("Axis Range Parameters"),
+                       div(id = 'response_custom',
+                           checkboxInput(inputId = 'customize_response_range', label="Customize Response Axis"),
+                           hidden(rangeConfig <- div(id = 'response_range_config',
+                                              h3('Response Range Customization'),
+                                              textInput(inputId = 'response_axis_title', label = "Response Axis Title", value="Response"),
+                                              splitLayout(
+                                                textInput(inputId = "resp_min", label = "Range Min", value = status$minResp),
+                                                textInput(inputId = "resp_max", label = "Range Max", value = status$maxResp),
+                                              ),
+                                              splitLayout(
+                                                textInput(inputId = "resp_tick_width", label = "Tick Width", value = 50),
+                                                textInput(inputId = "resp_first_tick", label = "First Tick Value", value = status$minResp),
+                                              )
+                           ))
+                       ),
+                       div(id = 'conc_custom',
+                           checkboxInput(inputId = 'customize_conc_range', label="Customize Concentration Axis"),
+                           hidden(rangeConfig <- div(id = 'conc_range_config',
+                                              h3('Concentration Range Customization'),
+                                              textInput(inputId = 'conc_axis_title', label = "Concentration Axis Title", value="log10[conc], M"),
+                                              splitLayout(
+                                                textInput(inputId = "conc_min", label = "Range Min", value = status$minConc),
+                                                textInput(inputId = "conc_max", label = "Range Max", value = status$maxConc),
+                                              ),
+                                              splitLayout(
+                                                textInput(inputId = "conc_tick_width", label = "Tick Width", value = 1.0),
+                                                textInput(inputId = "conc_first_tick", label = "First Tick Value", value = round(status$minConc)),
+                                              )
+                           ))
+                       ),
+                       checkboxInput(inputId = "show_curve_index_checkbox", label="Show Curve Number Axis Labels", value=T)
+                       )
+  )
+  return(plotParamDiv)
+}
+
 
 collectParameters <- function(input, output, status) {
 
@@ -163,11 +230,33 @@ collectParameters <- function(input, output, status) {
     antialias <- input$antialias
     lineRes <- as.numeric(input$curvePoints)
 
-    print("whats the file format...")
-    print(status$fileFormat)
 
-    print("status at the end of collect props")
-    print(status)
+    # plane colors and grid color
+    planeColors <- list()
+    planeColors[['basePlaneColor']] <- input$base_plane_color
+    planeColors[['rightPlaneColor']] <- input$right_plane_color
+    planeColors[['leftPlaneColor']] <- input$left_plane_color
+
+    gridColor = input$gridColor
+
+    # response scale config
+    responseAxisConfig <- list(min=input$resp_min, max=input$resp_max,
+                               tickSizeVal=input$resp_tick_width, firstTick=input$resp_first_tick)
+
+    # conc scale config
+    concAxisConfig <- list(min=input$conc_min, max=input$conc_max,
+                           tickSizeVal=input$conc_tick_width, firstTick=input$conc_first_tick)
+
+
+    # show curve number scale?
+    showCurveNumberLabels <- input$show_curve_index_checkbox
+
+    # axisTitles
+    axisTitles <- list()
+    axisTitles[['concTitle']] <- input$conc_axis_title
+    axisTitles[['respTitle']] <- input$response_axis_title
+    axisTitles[['curveTitle']] <- ""
+
 
     props <- list(inputFile = inputFile,
                   fileFormat = status$fileFormat,
@@ -182,7 +271,13 @@ collectParameters <- function(input, output, status) {
                   plotInactivePoints = plotInactives,
                   curveResolution = lineRes,
                   plotAspectRatio = aspectRatio,
-                  returnPlotObject = T)
+                  returnPlotObject = T,
+                  axisTitles = axisTitles,
+                  planeColors = planeColors,
+                  gridColor = gridColor,
+                  showCurveNumberLabels = showCurveNumberLabels,
+                  concAxisConfig = concAxisConfig,
+                  responseAxisConfig = responseAxisConfig)
 
   }
 
@@ -220,6 +315,7 @@ server <- function(input, output, session) {
 
     if(length(status$readouts) > 0) {
       insertUI(ui=addReadoutSelector(status$readouts), selector='#inputFile_progress', where='afterEnd')
+      insertUI(ui = addPlotCustomization(status), selector="#readout_params", where='afterEnd')
     }
 
     enable(id='plotRefreshBtn')
@@ -279,6 +375,21 @@ server <- function(input, output, session) {
   )
 
 
+  observeEvent(input$customize_conc_range, {
+    if(input$customize_conc_range) {
+      shinyjs::show("conc_range_config")
+    } else {
+      shinyjs::hide("conc_range_config")
+    }
+  })
+
+  observeEvent(input$customize_response_range, {
+    if(input$customize_response_range) {
+      shinyjs::show("response_range_config")
+    } else {
+      shinyjs::hide("response_range_config")
+    }
+  })
 
 
   observeEvent(input$plotRefreshBtn, {
@@ -289,19 +400,26 @@ server <- function(input, output, session) {
     } else {
 
       p <- qHTSWaterfall::plotWaterfall(inputFile = props$inputFile,
-                                            fileFormat = props$fileFormat,
-                                            activityReadouts = props$activityReadouts,
-                                            logMolarConcVector = props$logMolarConcVector,
-                                            pointColors = props$pointColors,
-                                            curveColors = props$curveColors,
-                                            inactiveColor = props$inactiveColor,
-                                            alpha=1,
-                                            pointSize = props$pointSize,
-                                            lineWeight = props$lineWeight,
-                                            plotInactivePoints = props$plotInactivePoints,
-                                            curveResolution = props$curveResolution,
-                                            plotAspectRatio = props$plotAspectRatio,
-                                            returnPlotObject = T)
+                                        fileFormat = props$fileFormat,
+                                        activityReadouts = props$activityReadouts,
+                                        logMolarConcVector = props$logMolarConcVector,
+                                        pointColors = props$pointColors,
+                                        curveColors = props$curveColors,
+                                        inactiveColor = props$inactiveColor,
+                                        alpha=1,
+                                        pointSize = props$pointSize,
+                                        lineWeight = props$lineWeight,
+                                        plotInactivePoints = props$plotInactivePoints,
+                                        curveResolution = props$curveResolution,
+                                        plotAspectRatio = props$plotAspectRatio,
+                                        returnPlotObject = T,
+                                        axisTitles = props$axisTitles,
+                                        planeColors = props$planeColors,
+                                        gridColor = props$gridColor,
+                                        showCurveNumberLabels = props$showCurveNumberLabels,
+                                        concAxisConfig = props$concAxisConfig,
+                                        responseAxisConfig = props$responseAxisConfig
+      )
       output$mainPlot <- plotly::renderPlotly(p)
 
       # output$mainPlot <- rgl::renderRglwidget(

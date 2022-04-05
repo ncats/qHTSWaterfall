@@ -3,7 +3,7 @@
 export(plotWaterfall)
 export(runQHTSWaterfallApp)
 import(dplyr)
-import(rgl)
+import(plotly)
 import(stringr)
 import(tidyr)
 importFrom(utils,read.csv)

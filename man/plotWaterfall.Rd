@@ -6,23 +6,34 @@
 \usage{
 plotWaterfall(
   inputFile,
+  fileFormat = "generic_qhts",
   activityReadouts = c("Activity"),
   logMolarConcVector,
   pointColors = c("darkgreen", "royalblue3"),
   curveColors = c("darkgreen", "royalblue3"),
   inactiveColor = "gray",
   alpha = 1,
-  pointSize = 2,
-  lineWeight = 1,
+  pointSize = 1,
+  lineWeight = 1.5,
   plotInactivePoints = T,
   curveResolution = 25,
   plotAspectRatio = c(1, 1, 3),
   antialiasSmoothing = F,
-  returnPlotObject = F
+  returnPlotObject = F,
+  axisTitles = list(concTitle = "log2[Conc], M", respTitle = "Response", curveTitle =
+    ""),
+  planeColors = list(basePlaneColor = "#b8b6b6", rightPlaneColor = "#999494",
+    leftPlaneColor = "#6e6868"),
+  gridColor = "#ffffff",
+  showCurveNumberLabels = TRUE,
+  concAxisConfig = NULL,
+  responseAxisConfig = NULL
 )
 }
 \arguments{
-\item{inputFile}{An optional input file path. If none is provided, a file chooser will prompt.}
+\item{inputFile}{The input file path.}
+
+\item{fileFormat}{a required value indicdating the file format. Valid values are 'Generic_qhts' or 'NCATS_qhts'. The value is case-insensitive.}
 
 \item{activityReadouts}{Activity data readouts to include in plot}
 
@@ -54,6 +65,18 @@ Input as list, derault: c(1, 1, 3)}
 
 \item{returnPlotObject}{if True, it returns an rgl 'scene' object that can be plotted using 'rgl::plot3d()'.
 If FALSE, the default value, this function opens and rgl plot window for plotting.}
+
+\item{axisTitles}{a list holding response, concentration and curve number axis titles (default, list(concTitle="log2Conc, M", respTitle="Response", curveTitle=""))}
+
+\item{planeColors}{a list holding base, left and right plane colors, value names/keys are 'basePlaneColor, rightPlaneColor, leftPlaneColor.}
+
+\item{gridColor}{a specified color for grids, color name or hex color value (default #ffffff)}
+
+\item{showCurveNumberLabels}{boolean, indicates if the curve index numbers should be shown on the axis, or hidden.}
+
+\item{concAxisConfig}{a list with 4 named values: min, max, tickWidth, firstTick.}
+
+\item{responseAxisConfig}{a list with 4 named values: min, max, tickWidth, firstTick.}
 }
 \description{
 Plots 3D qHTS waterfall plot, given Pubchem activity file or NCATS qHTS format file.

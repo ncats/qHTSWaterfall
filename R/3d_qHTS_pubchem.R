@@ -28,8 +28,14 @@ extractReadoutColumns <- function(colList, readout, colKey) {
 #' @param antialiasSmoothing smooths plot line rendering. Default is FALSE. Setting as TRUE will smooth lines, but may slow response during re-drawing plot.
 #' @param returnPlotObject if True, it returns an rgl 'scene' object that can be plotted using 'rgl::plot3d()'.
 #' If FALSE, the default value, this function opens and rgl plot window for plotting.
+#' @param axisTitles a list holding response, concentration and curve number axis titles (default, list(concTitle="log2Conc, M", respTitle="Response", curveTitle=""))
+#' @param planeColors a list holding base, left and right plane colors, value names/keys are 'basePlaneColor, rightPlaneColor, leftPlaneColor.
+#' @param gridColor a specified color for grids, color name or hex color value (default #ffffff)
+#' @param showCurveNumberLabels boolean, indicates if the curve index numbers should be shown on the axis, or hidden.
+#' @param concAxisConfig a list with 4 named values: min, max, tickWidth, firstTick.
+#' @param responseAxisConfig a list with 4 named values: min, max, tickWidth, firstTick.
 #' @importFrom utils read.csv
-#' @import rgl
+#' @import plotly
 #' @import stringr
 #' @import dplyr
 #' @import tidyr
@@ -73,12 +79,12 @@ extractReadoutColumns <- function(colList, readout, colKey) {
 #' }
 #' @export
 plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts = c('Activity'), logMolarConcVector,
-                           pointColors=c('darkgreen','royalblue3'), curveColors=c('darkgreen', 'royalblue3'),
-                           inactiveColor='gray', alpha=1, pointSize=1.0, lineWeight=1.5, plotInactivePoints=T, curveResolution=25,
+                          pointColors=c('darkgreen','royalblue3'), curveColors=c('darkgreen', 'royalblue3'),
+                          inactiveColor='gray', alpha=1, pointSize=1.0, lineWeight=1.5, plotInactivePoints=T, curveResolution=25,
                           plotAspectRatio=c(1,1,3), antialiasSmoothing = F, returnPlotObject = F,
                           axisTitles = list(concTitle="log2[Conc], M", respTitle="Response", curveTitle=""),
                           planeColors = list(basePlaneColor="#b8b6b6", rightPlaneColor="#999494", leftPlaneColor="#6e6868"),
-                          gridColor = "#ffff", showCurveNumberLabels = TRUE, concAxisConfig = NULL, responseAxisConfig = NULL) {
+                          gridColor = "#ffffff", showCurveNumberLabels = TRUE, concAxisConfig = NULL, responseAxisConfig = NULL) {
 
 
 
@@ -98,10 +104,6 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   aspect[['x']] <- plotAspectRatio[1]
   aspect[['y']] <- plotAspectRatio[3]
   aspect[['z']] <- plotAspectRatio[2]
-
-
-
-
 
   plotPoints = T
   if(pointSize == 0) {
@@ -607,12 +609,11 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     axy[['ticks']] <- 'outside'
   }
 
-  p <- plot_ly(wfl, x=~x, y=~z, z=~y, color=~readout, colors=linePal) %>% group_by(readout)
-  p <- p %>% layout(scene = list(aspectratio = aspect,
-                                 xaxis=axx, yaxis=axy, zaxis=axz,
-                                 camera = list(eye = list(x = 2.25, y = 2.25, z = 0.3))
-                                 ))
-  p <- p %>% add_lines(line=list(width=lineWeight)) %>% style(hoverinfo='none')
+  p <- plotly::plot_ly(wfl, x=~x, y=~z, z=~y, color=~readout, colors=linePal) %>% group_by(readout)
+
+  p <- p %>% plotly::layout(scene = list(aspectratio = aspect, xaxis=axx, yaxis=axy, zaxis=axz, camera = list(eye = list(x = 2.25, y = 2.25, z = 0.3))))
+
+  p <- p %>% plotly::add_lines(line=list(width=lineWeight)) %>% style(hoverinfo='none')
 
   p <- p %>% plotly::add_trace(x=~wfp$x, y=~wfp$z, z=~wfp$y, color=~wfp$readout, colors=pointPal,
                                  type='scatter3d', mode='markers', marker = list(size=pointSize), inherit=F)
@@ -768,6 +769,14 @@ evaluateInputFile <- function(filePath) {
   print(status$logConc)
   print(status$concLength)
 
+  # capture optimal initial concRange
+  status$minConc <- ceiling(min(concVector))
+  status$maxConc <- floor(max(concVector))
+
+  # set reasonable bounds for the range min and max
+  respLimits <- evalDataRange(filePath, concVector)
+  status$minResp <- respLimits[1]
+  status$maxResp <- respLimits[2]
   # skip the first header and read table
   cdata <- read.csv(filePath, skip=1, header=T, na.string="null")
   heads <- colnames(cdata)
@@ -797,6 +806,41 @@ evaluateInputFile <- function(filePath) {
     }
 
   return(status)
+}
+
+evalDataRange <- function(filePath, conc) {
+
+  cdata <- read.csv(filePath, header=TRUE, skip=1, na.string="null")
+
+  dataCols <- c()
+
+  for(i in 1:length(conc)){
+    dataCols <- c(dataCols, paste("Data",(i-1), sep=""))
+  }
+
+  print(colnames(cdata))
+  print(dataCols)
+  responseData <- as.matrix(cdata[,dataCols])
+  rangeQuantiles <- quantile(responseData, probs <- c(0.02, 0.98), na.rm=T)
+  lowerLimit <- rangeQuantiles[[1]]
+  if(lowerLimit < 0) {
+    lowerLimit <- ceiling(lowerLimit)
+  } else {
+    lowerLimit <- floor(lowerLimit)
+  }
+
+  lowerLimit <- lowerLimit - (lowerLimit %% 50)
+
+  upperLimit <- rangeQuantiles[[2]]
+  if(upperLimit > 0) {
+    upperLimit <- ceiling(upperLimit)
+  } else {
+    upperLimit <- floor(upperLimit)
+  }
+
+  upperLimit <- upperLimit - (upperLimit %% 50) + 50
+
+  return(list(lowerLimit, upperLimit))
 }
 
 #EXPORTING THE IMAGE FILES -----------------------------------------------------
