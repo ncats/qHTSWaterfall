@@ -86,10 +86,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
                           planeColors = list(basePlaneColor="#b8b6b6", rightPlaneColor="#999494", leftPlaneColor="#6e6868"),
                           gridColor = "#ffffff", showCurveNumberLabels = TRUE, concAxisConfig = NULL, responseAxisConfig = NULL) {
 
-
-
-
-
+  TimemethodStart = Sys.time()
 
   # Dummy test for now...
   if(fileFormat == 'ncats_qhts') {
@@ -244,9 +241,6 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
         }
       }
     } else {
-
-      print("Hey I don't have fit_output.................................................................................................")
-
       for (i in 1:nrow(cdata)){
         if(cdata[i,readout] %in% keyReadouts) {
           #if(cdata[i,readout]==keyword_1 || cdata[i,readout]==keyword_2){
@@ -260,7 +254,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
 
 
 
-  print("HEY!!!! just before making data points....")
+  TimeJustBeforeBuildPoints <- Sys.time()
 
 
   # need to capture the list of data for each readout
@@ -294,6 +288,10 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     }
   }
 
+  TimeAfterDataSubset <- Sys.time()
+
+  print("Time to subset data!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+  print(TimeAfterDataSubset - TimeJustBeforeBuildPoints)
   # names(cdata_curves) <- c("Fit_Output", "readout", "LAC50", "HILL", "INF", "ZERO"
 
 
@@ -316,6 +314,10 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     readoutCount <- readoutCount + 1
   }
 
+  print("Time for add titration points!!!!!!!!")
+  print(TimeAfterDataSubset - Sys.time())
+
+  TimeStartPivotPointMatrix <- Sys.time()
 
   # pivot main matrices
   fullMatriix <- NULL
@@ -331,6 +333,10 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   }
 
   mainMatrix <- tidyr::pivot_longer(fullMatrix, cols = 4:(ncol(fullMatrix)-1), names_to = "x", values_to = "y")
+
+  TimeAfterPivotMainMatrices <- Sys.time()
+  print("time to pivot points matrix")
+  print(TimeAfterPivotMainMatrices - TimeStartPivotPointMatrix)
 
   #mainMatrix <- tidyr::pivot_longer(cdata_points, cols = 2:(l-1), names_to = c("x","z"), names_pattern = "(.)(.)", values_to = "y")
 
@@ -376,29 +382,84 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   # waterfall_POINTS_data_1 <- data.frame(x=double(), y=double(), z=double())
   # waterfall_POINTS_data_2 <- data.frame(x=double(), y=double(), z=double())
 
+  TimeJustBeforeBindRowsPoints <- Sys.time()
+
   l <- nrow(waterfall_POINTS_data)
-  for(i in 1:l){
 
-    readout <- waterfall_POINTS_data$readout[i]
-    showFit <- waterfall_POINTS_data$Fit_Output[i]
 
-    if(readout %in% keyReadouts && showFit == 1) {
-      #if(waterfall_POINTS_data$readout[i] == keyword_1 || waterfall_POINTS_data$readout[i] == keyword_2) {
-      wfData <- waterfallPoints[[readout]]
 
-      wfData <- dplyr::bind_rows(wfData, data.frame(x=waterfall_POINTS_data$x[i],
-                                                    y=waterfall_POINTS_data$y[i],
-                                                    z=waterfall_POINTS_data$z[i]))
-      waterfallPoints[[readout]] <- wfData
-    } else if(plotInactivePoints) {
 
-      wfDataInactive = waterfallPoints[['inactive']]
-      wfDataInactive <- dplyr::bind_rows(wfDataInactive, data.frame(x=waterfall_POINTS_data$x[i],
-                                                                    y=waterfall_POINTS_data$y[i],
-                                                                    z=waterfall_POINTS_data$z[i]))
-      waterfallPoints[['inactive']] <- wfDataInactive
-    }
+
+
+
+  # iterates over all waterfall points
+  # for each row get the readout on that row
+  # capture show fit
+
+  # if the readout is a key readout and we show the fit
+  # subset the waterfall points df by readout (list dereference)
+  # then bind that row to that data subset
+  # then put that readout subset back into the list, putting away the dataframe.
+
+  # why bind rows individually, will a subsetting keep the order?
+
+  for(readout in keyReadouts) {
+    readoutData <- waterfall_POINTS_data[(waterfall_POINTS_data$readout == readout & waterfall_POINTS_data$Fit_Output == 1), c('x','y','z')]
+    waterfallPoints[[readout]] <- readoutData
   }
+
+  if(plotInactivePoints) {
+    readoutData <- waterfall_POINTS_data[waterfall_POINTS_data$Fit_Output == 0, c('x','y','z')]
+    waterfallPoints[['inactive']] <- readoutData
+  }
+
+
+print("HEy where are teh fluc points????")
+
+
+
+
+
+
+
+  # for(i in 1:l){
+  #
+  #   readout <- waterfall_POINTS_data$readout[i]
+  #   showFit <- waterfall_POINTS_data$Fit_Output[i]
+  #
+  #   if(readout %in% keyReadouts && showFit == 1) {
+  #     #if(waterfall_POINTS_data$readout[i] == keyword_1 || waterfall_POINTS_data$readout[i] == keyword_2) {
+  #     wfData <- waterfallPoints[[readout]]
+  #
+  #     wfData <- dplyr::bind_rows(wfData, data.frame(x=waterfall_POINTS_data$x[i],
+  #                                                   y=waterfall_POINTS_data$y[i],
+  #                                                   z=waterfall_POINTS_data$z[i]))
+  #     waterfallPoints[[readout]] <- wfData
+  #   } else if(plotInactivePoints) {
+  #
+  #     wfDataInactive = waterfallPoints[['inactive']]
+  #     wfDataInactive <- dplyr::bind_rows(wfDataInactive, data.frame(x=waterfall_POINTS_data$x[i],
+  #                                                                   y=waterfall_POINTS_data$y[i],
+  #                                                                   z=waterfall_POINTS_data$z[i]))
+  #     waterfallPoints[['inactive']] <- wfDataInactive
+  #   }
+  # }
+
+
+
+
+
+
+
+
+
+
+
+  TimeFinishedCurvePoints <- Sys.time()
+
+
+  print("row binding points time")
+  print(TimeFinishedCurvePoints - TimeJustBeforeBindRowsPoints)
 
   #taking care of missing data ---------------------------------------------------
   cdata_curves$LAC50[is.na(cdata_curves$LAC50)] <- log10(10)
@@ -408,7 +469,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   mainMatrix <- data.frame(x=double(),y=double(),z=double())
   rowIndex = 0;
 
-  # Need to use the same strategy used for setting z on points, interleaving respose curves for different readouts
+  # Need to use the same strategy used for setting z on points, interleaving response curves for different readouts
   numReadouts <- length(activityReadouts)
   readoutCount <- 1
   curveCount <- 1
@@ -456,6 +517,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     waterfallLines[[i]] <- m
   }
 
+  TimeAfterCurveBuild <- Sys.time()
 
 
 
@@ -500,6 +562,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
 
   # graph view coordinates
 
+  TimeJustBeforePlotlyDataBuild <- Sys.time()
 
   # Plotly...
   resIndex = 1
@@ -609,6 +672,8 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     axy[['ticks']] <- 'outside'
   }
 
+  TimeJustBeforePlotlyCall <- Sys.time()
+
   p <- plotly::plot_ly(wfl, x=~x, y=~z, z=~y, color=~readout, colors=linePal) %>% group_by(readout)
 
   p <- p %>% plotly::layout(scene = list(aspectratio = aspect, xaxis=axx, yaxis=axy, zaxis=axz, camera = list(eye = list(x = 2.25, y = 2.25, z = 0.3))))
@@ -617,6 +682,29 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
 
   p <- p %>% plotly::add_trace(x=~wfp$x, y=~wfp$z, z=~wfp$y, color=~wfp$readout, colors=pointPal,
                                  type='scatter3d', mode='markers', marker = list(size=pointSize), inherit=F)
+
+  TimeJustAfterPlotlyPlotBuild <- Sys.time()
+
+  print("Time to runup to build points")
+  print((TimeJustBeforeBuildPoints - TimemethodStart))
+  print("Time to build points")
+  print(TimeJustBeforePlotlyDataBuild - TimeJustBeforeBuildPoints)
+  print("Time to build plotly points")
+  print(TimeJustBeforePlotlyCall - TimeJustBeforePlotlyDataBuild)
+  print("Time to build ")
+  print(TimeJustAfterPlotlyPlotBuild - TimeJustBeforePlotlyCall)
+
+  print("")
+  print("")
+
+  print("evaluate the time to build points and curves")
+  print("pivot time")
+  print(TimeAfterPivotMainMatrices - TimeAfterDataSubset)
+  print("build points")
+  print(TimeFinishedCurvePoints - TimeJustBeforeBuildPoints)
+  print("build curves")
+  print(TimeAfterCurveBuild - TimeFinishedCurvePoints)
+
 
   return(p)
 
@@ -842,6 +930,9 @@ evalDataRange <- function(filePath, conc) {
 
   return(list(lowerLimit, upperLimit))
 }
+
+
+
 
 #EXPORTING THE IMAGE FILES -----------------------------------------------------
 

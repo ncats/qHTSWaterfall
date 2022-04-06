@@ -295,6 +295,9 @@ server <- function(input, output, session) {
 
   status <- ""
 
+  wfPoints <- reactiveVal(0)
+  wfLines <- reactiveVal(0)
+
   observeEvent(input$inputFile, {
 
 
