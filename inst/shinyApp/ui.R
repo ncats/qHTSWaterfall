@@ -75,9 +75,9 @@ shinyUI(fluidPage(
                        'Plot / Refresh'),
         div(
           id = "mainPlotDiv",
-          plotly::plotlyOutput(outputId = "mainPlot",
+          shinycssloaders::withSpinner(plotly::plotlyOutput(outputId = "mainPlot",
                                width = '100%',
-                               height = '600px')
+                               height = '600px'))
           # rgl::rglwidgetOutput(
           #   outputId = "mainPlot"
           #   #width = '100%',
