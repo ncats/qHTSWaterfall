@@ -64,6 +64,7 @@ extractReadoutColumns <- function(colList, readout, colKey) {
 #' # 3D Plot will be presented in a separate window.
 #' plotWaterfall(
 #'   inputFile=filePath,
+#'   fileFormat = 'ncats_qhts',
 #'   activityReadouts = c("fluc", "nluc"),
 #'   logMolarConcVector = logConc,
 #'   pointColors = c("darkgreen", "royalblue3"),
@@ -86,13 +87,11 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
                           planeColors = list(basePlaneColor="#b8b6b6", rightPlaneColor="#999494", leftPlaneColor="#6e6868"),
                           gridColor = "#ffffff", showCurveNumberLabels = TRUE, concAxisConfig = NULL, responseAxisConfig = NULL) {
 
-  TimemethodStart = Sys.time()
 
-  # Dummy test for now...
   if(fileFormat == 'ncats_qhts') {
-  pubchem_data <- 0
+    generic_data <- 0
   } else {
-    pubchem_data <- 0
+    generic_data <- 1
   }
 
 
@@ -106,9 +105,6 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   if(pointSize == 0) {
     plotPoints = F
   }
-  print("plotPoints???")
-  print(plotPoints)
-  ## Put in checks
 
   #activity readouts, should have an equal or greater numbrer of point and curve colors
 
@@ -129,26 +125,13 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   pointColors <- c(pointColors, inactiveColor)
   lineColors <- c(curveColors, inactiveColor)
 
-  #col_1 <- c(pointColors[1]) #active points
-  #col_2 <- c(pointColors[2])   # noise  or non-actives
-  #col_3 <- c(curveColors[1])   #keyword_1 curve color
-  #col_4 <- c(curveColors[2]) #keyword_2 curve color
-  # all R colors can be found at http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf
-
-  #Asking to select file ---------------------------------------------------------
-  if(is.null(inputFile)) {
-    ifile <- file.choose()
-  } else {
-    ifile <- inputFile
-  }
-
-  #Reading first line of CSV file to detect data type ----------------------------
-  cdata <- read.csv(ifile, header=TRUE, skip=1, na.string="null",nrows = 1)
+  # read data file (header line 2 and body) ----------------------------
+  cdata <- read.csv(inputFile, header=TRUE, skip=1, na.string="null")
   heads <- colnames(cdata)
 
 
   #Identifying data headers to load ----------------------------------------------
-  if(fileFormat == 'generic_qhts') {
+  if(generic_data == 1) {
 
     #matching variable names
     compId <- "Comp_ID"
@@ -160,7 +143,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     zero <- "S_0"
 
   } else {
-    cdata <- read.csv(ifile, header=TRUE, skip=1, na.string="null")
+
     #matching variable names
     compId <- "Sample.ID"
     fit <- "Fit_Output"
@@ -172,56 +155,18 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
 
   }
 
-
-  #SETTING LOG MOLAR CONCENTRATIONS ----------------------------------------------
-  #if it is pubchem data, the program automatically finds and converts it
-  #if it is data from somewhere else, please input the data after the "else"
-  #statement
-  #REMINDER: it is the log([concentration(M)])
-
   titrationLengths <- list()
   minConc <- list()
   maxConc <- list()
 
-  if(pubchem_data == 1){
-
-    for(currReadout in names(concValues)) {
-      x <- concValues[[currReadout]]
-      y <- concUnits[[currReadout]]
-      conc <- NULL
-      #log(molar concentration)
-
-      for(i in 1:length(y)){
-        conc[i] <- switch(y[i],
-                          "uM" = log10(x[i]*1e-06),
-                          "nM" = log10(x[i]*1e-09),
-                          "mM" = log10(x[i]*1e-03),
-                          "pM" = log10(x[i]*1e-12),
-                          "cM" = log10(x[i]*1e-02),
-                          "dM" = log10(x[i]*1e-01),
-                          "fM" = log10(x[i]*1e-15),
-                          log10(x[i]))
-      }
-      conc <- format(round(conc, 2), nsmall = 2)
-      conc <- as.numeric(conc)
-      concValues[[currReadout]] <- conc
-
-      titrationLengths[[currReadout]] <- length(conc)
-      minConc[[currReadout]] <- min(conc)
-      maxConc[[currReadout]] <- max(conc)
-    }
-  }else{
-    # verify that we have conc values, if not issue warning and request that conc be supplied.
-
-    # for now, apply the single logMolarConcVector to all readouts
-    concValues <- list()
-    for(currReadout in activityReadouts) {
-      logMolarConcVector <- format(round(logMolarConcVector, 2), nsmall = 2)
-      logMolarConcVector <- as.numeric(logMolarConcVector)
-      concValues[[currReadout]] <- logMolarConcVector
-      minConc[[currReadout]] <- min(logMolarConcVector)
-      maxConc[[currReadout]] <- max(logMolarConcVector)
-    }
+  # for now, apply the single logMolarConcVector to all readouts
+  concValues <- list()
+  for(currReadout in activityReadouts) {
+    logMolarConcVector <- format(round(logMolarConcVector, 2), nsmall = 2)
+    logMolarConcVector <- as.numeric(logMolarConcVector)
+    concValues[[currReadout]] <- logMolarConcVector
+    minConc[[currReadout]] <- min(logMolarConcVector)
+    maxConc[[currReadout]] <- max(logMolarConcVector)
   }
 
 
@@ -231,7 +176,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
 
   #creating a Fit_Output if not given one ----------------------------------------
   if(fit %in% heads == FALSE){
-    if(pubchem_data == 1) {
+    if(generic_data == 1) {
       for (i in 1:nrow(cdata)){
         if(cdata[i,readout] == 'Active') {
           #if(cdata[i,readout]==keyword_1 || cdata[i,readout]==keyword_2){
@@ -253,26 +198,22 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   }
 
 
-
-  TimeJustBeforeBuildPoints <- Sys.time()
-
-
   # need to capture the list of data for each readout
 
   #creating smaller data sets with only needed data-------------------------------
   cdata_points <- list()
   cdata_curves <- list()
-  if(pubchem_data == 1){
-    for(currReadout in names(concMapping)) {
-      concCols <- concMapping[[currReadout]]
-      cdata_points[[currReadout]] <- cdata %>% select(fit, compId, readout, concCols)
-      cdata_curves[[currReadout]] <- cdata %>% select(compId, fit, readout, lac50[[currReadout]], hill[[currReadout]], inf[[currReadout]], zero[[currReadout]])
-      colnames(cdata_curves[[currReadout]]) <- c("COMP_ID", "Fit_Output", "readout", "LAC50", "HILL", "INF", "ZERO")
-      # need to alter readout to reflect the readout
-      cdata_curves[[currReadout]]$readout <- currReadout
-    }
+ # if(F){
+    # for(currReadout in names(concMapping)) {
+    #   concCols <- concMapping[[currReadout]]
+    #   cdata_points[[currReadout]] <- cdata %>% select(fit, compId, readout, concCols)
+    #   cdata_curves[[currReadout]] <- cdata %>% select(compId, fit, readout, lac50[[currReadout]], hill[[currReadout]], inf[[currReadout]], zero[[currReadout]])
+    #   colnames(cdata_curves[[currReadout]]) <- c("COMP_ID", "Fit_Output", "readout", "LAC50", "HILL", "INF", "ZERO")
+    #   # need to alter readout to reflect the readout
+    #   cdata_curves[[currReadout]]$readout <- currReadout
+    # }
 
-  } else {
+ # } else {
     dataCols <- NULL
     for(i in 1:length(conc)){
       dataCols[i] <- c(paste("Data",(i-1), sep=""))
@@ -282,17 +223,11 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
 
     # partition the data by readout
     for(currReadout in activityReadouts) {
-      cdata_points[[currReadout]] <- subset(all_cdata_points, all_cdata_points$Sample.Data.Type == currReadout)
-      cdata_curves[[currReadout]] <- subset(all_cdata_curves, all_cdata_curves$Sample.Data.Type == currReadout)
+      cdata_points[[currReadout]] <- subset(all_cdata_points, all_cdata_points[[readout]] == currReadout)
+      cdata_curves[[currReadout]] <- subset(all_cdata_curves, all_cdata_curves[[readout]] == currReadout)
       colnames(cdata_curves[[currReadout]]) <- c("Fit_Output", "COMP_ID", "readout", "LAC50", "HILL", "INF", "ZERO")
     }
-  }
-
-  TimeAfterDataSubset <- Sys.time()
-
-  print("Time to subset data!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-  print(TimeAfterDataSubset - TimeJustBeforeBuildPoints)
-  # names(cdata_curves) <- c("Fit_Output", "readout", "LAC50", "HILL", "INF", "ZERO"
+#  }
 
 
   #titration points to be put on the graph ---------------------------------------
@@ -314,11 +249,6 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     readoutCount <- readoutCount + 1
   }
 
-  print("Time for add titration points!!!!!!!!")
-  print(TimeAfterDataSubset - Sys.time())
-
-  TimeStartPivotPointMatrix <- Sys.time()
-
   # pivot main matrices
   fullMatriix <- NULL
   readoutCount <- 1
@@ -333,10 +263,6 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   }
 
   mainMatrix <- tidyr::pivot_longer(fullMatrix, cols = 4:(ncol(fullMatrix)-1), names_to = "x", values_to = "y")
-
-  TimeAfterPivotMainMatrices <- Sys.time()
-  print("time to pivot points matrix")
-  print(TimeAfterPivotMainMatrices - TimeStartPivotPointMatrix)
 
   #mainMatrix <- tidyr::pivot_longer(cdata_points, cols = 2:(l-1), names_to = c("x","z"), names_pattern = "(.)(.)", values_to = "y")
 
@@ -379,19 +305,14 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   }
 
 
-  # waterfall_POINTS_data_1 <- data.frame(x=double(), y=double(), z=double())
-  # waterfall_POINTS_data_2 <- data.frame(x=double(), y=double(), z=double())
 
-  TimeJustBeforeBindRowsPoints <- Sys.time()
+  ##########
+  ##
+  ## Old points method, inefficient
+  ##
+  ##########
 
-  l <- nrow(waterfall_POINTS_data)
-
-
-
-
-
-
-
+  # notes during rework...
   # iterates over all waterfall points
   # for each row get the readout on that row
   # capture show fit
@@ -403,25 +324,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
 
   # why bind rows individually, will a subsetting keep the order?
 
-  for(readout in keyReadouts) {
-    readoutData <- waterfall_POINTS_data[(waterfall_POINTS_data$readout == readout & waterfall_POINTS_data$Fit_Output == 1), c('x','y','z')]
-    waterfallPoints[[readout]] <- readoutData
-  }
-
-  if(plotInactivePoints) {
-    readoutData <- waterfall_POINTS_data[waterfall_POINTS_data$Fit_Output == 0, c('x','y','z')]
-    waterfallPoints[['inactive']] <- readoutData
-  }
-
-
-print("HEy where are teh fluc points????")
-
-
-
-
-
-
-
+  # l <- nrow(waterfall_POINTS_data)
   # for(i in 1:l){
   #
   #   readout <- waterfall_POINTS_data$readout[i]
@@ -446,20 +349,18 @@ print("HEy where are teh fluc points????")
   # }
 
 
+  # Reworked point methods, only iterates over readouts and checks inactives, about 6x faster for a 15K point set
+  # The relitive improvement will increase for very large data sets, because we no longer iterate over all points, but rather subset.
+  for(readout in keyReadouts) {
+    readoutData <- waterfall_POINTS_data[(waterfall_POINTS_data$readout == readout & waterfall_POINTS_data$Fit_Output == 1), c('x','y','z')]
+    waterfallPoints[[readout]] <- readoutData
+  }
 
+  if(plotInactivePoints) {
+    readoutData <- waterfall_POINTS_data[waterfall_POINTS_data$Fit_Output == 0, c('x','y','z')]
+    waterfallPoints[['inactive']] <- readoutData
+  }
 
-
-
-
-
-
-
-
-  TimeFinishedCurvePoints <- Sys.time()
-
-
-  print("row binding points time")
-  print(TimeFinishedCurvePoints - TimeJustBeforeBindRowsPoints)
 
   #taking care of missing data ---------------------------------------------------
   cdata_curves$LAC50[is.na(cdata_curves$LAC50)] <- log10(10)
@@ -683,29 +584,6 @@ print("HEy where are teh fluc points????")
   p <- p %>% plotly::add_trace(x=~wfp$x, y=~wfp$z, z=~wfp$y, color=~wfp$readout, colors=pointPal,
                                  type='scatter3d', mode='markers', marker = list(size=pointSize), inherit=F)
 
-  TimeJustAfterPlotlyPlotBuild <- Sys.time()
-
-  print("Time to runup to build points")
-  print((TimeJustBeforeBuildPoints - TimemethodStart))
-  print("Time to build points")
-  print(TimeJustBeforePlotlyDataBuild - TimeJustBeforeBuildPoints)
-  print("Time to build plotly points")
-  print(TimeJustBeforePlotlyCall - TimeJustBeforePlotlyDataBuild)
-  print("Time to build ")
-  print(TimeJustAfterPlotlyPlotBuild - TimeJustBeforePlotlyCall)
-
-  print("")
-  print("")
-
-  print("evaluate the time to build points and curves")
-  print("pivot time")
-  print(TimeAfterPivotMainMatrices - TimeAfterDataSubset)
-  print("build points")
-  print(TimeFinishedCurvePoints - TimeJustBeforeBuildPoints)
-  print("build curves")
-  print(TimeAfterCurveBuild - TimeFinishedCurvePoints)
-
-
   return(p)
 
 
@@ -779,29 +657,20 @@ print("HEy where are teh fluc points????")
 
 evaluateInputFile <- function(filePath) {
 
-  print("In evalu file")
-  print(filePath)
-
   fileFormats <- c("generic", "ncats_qhts")
 
   status <- list()
   status$valid <- TRUE
 
+  status$inputFile <- filePath
+
   formatConcHeader <- scan(filePath, nlines = 1, what = character())
 
-  print("Finished scan of file...")
-
-
-  print(formatConcHeader)
   formatConcHeader <- unlist(strsplit(formatConcHeader, ","))
-  print(formatConcHeader)
-
 
   for(i in 1:length(formatConcHeader)) {
     formatConcHeader[i] <- tolower(trimws(formatConcHeader[i]))
   }
-
-  print(formatConcHeader)
 
   # error checking
 
@@ -854,9 +723,6 @@ evaluateInputFile <- function(filePath) {
   status$logConc <- concVector
   status$concLength <- length(concVector)
 
-  print(status$logConc)
-  print(status$concLength)
-
   # capture optimal initial concRange
   status$minConc <- ceiling(min(concVector))
   status$maxConc <- floor(max(concVector))
@@ -869,18 +735,11 @@ evaluateInputFile <- function(filePath) {
   cdata <- read.csv(filePath, skip=1, header=T, na.string="null")
   heads <- colnames(cdata)
 
-  print("file format")
-  print(status$fileFormat)
-  print(heads)
-
   if(status$fileFormat == 'ncats_qhts') {
     readoutColName <- "Sample.Data.Type"
   } else {
     readoutColName <- "Readout"
   }
-
-  print("readout col")
-  print(readoutColName)
 
     readoutCol <- heads[grep(readoutColName, heads, ignore.case = T)]
 
@@ -892,6 +751,13 @@ evaluateInputFile <- function(filePath) {
       status$problem <- "Can't find a 'Readout' (generic_qhts format) or 'Sample Data Type' (ncats_qhts format) column<br>in the input file. Check column names."
       return(status)
     }
+
+
+    # set default colors
+    defaultColors <- c('darkgreen', 'blue2', 'darkorange', 'deeppink3', 'deepskyblue3', 'darkorchid3',
+                        'brown3', 'aquamarine3')
+
+    status$defaultColors <- defaultColors[1:length(readouts)]
 
   return(status)
 }
@@ -906,8 +772,6 @@ evalDataRange <- function(filePath, conc) {
     dataCols <- c(dataCols, paste("Data",(i-1), sep=""))
   }
 
-  print(colnames(cdata))
-  print(dataCols)
   responseData <- as.matrix(cdata[,dataCols])
   rangeQuantiles <- quantile(responseData, probs <- c(0.02, 0.98), na.rm=T)
   lowerLimit <- rangeQuantiles[[1]]

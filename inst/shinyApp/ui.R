@@ -1,29 +1,93 @@
-# library(shiny)
-# library(shinyjs)
-#
+library(shiny)
+library(shinyjs)
+
+
+addPlotCustomizationUI <- function() {
+
+
+  sizeParamDiv <- div(
+    h3("Point Size and Line Weight"),
+    pointSize <- sliderInput(inputId = "pointSize", label="Point Size [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T),
+    lineWeight <- sliderInput(inputId = "lineWeight", label="Line Weight [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T),
+  )
+  aspectRatioDiv <- div(
+    h3("Plot Aspect Ratio"),
+    aspectX <- selectInput(inputId="aspectX", label="X (conc.) size ratio", choices=c(1:10), selected=1),
+    aspectY <- selectInput(inputId="aspectY", label="Y (response) size ratio", choices=c(1:10), selected=1),
+    aspectZ <- selectInput(inputId="aspectZ", label="Z (plot width) size ratio", choices=c(1:10), selected=3),
+  )
+  antiAliasing <- checkboxInput(inputId="antialias", label="Antialias/Smooth Lines",value=T)
+  curvePointCount <- selectInput(inputId="curvePoints", label="Number of points to define curve fits.", choices=c(seq(25,250,25)), selected=100)
+
+
+
+  extraParamsDiv <- div( class='param_div',
+                         sizeParamDiv,
+                         aspectRatioDiv,
+                         antiAliasing,
+                         curvePointCount
+  )
+
+
+  plotParamDiv <- div( id="detail_params",
+                       extraParamsDiv,
+                       div(id='plane_colors',
+                           h3("Plot Plane Colors"),
+                           basePlaneColor <- colourpicker::colourInput(
+                             inputId = 'base_plane_color', label = 'base/bottom plane color',
+                             value = "#b8b6b6"
+                           ),
+
+                           leftPlaneColor <- colourpicker::colourInput(
+                             inputId = 'left_plane_color', label = 'left verical plane color',
+                             value = "#6e6868"
+                           ),
+
+                           rigthPlaneColor <- colourpicker::colourInput(
+                             inputId = 'right_plane_color', label = 'right verical plane color',
+                             value = "#999494"
+                           ),
+                           gridColor <- colourpicker::colourInput(
+                             inputId = 'grid_color', label = 'grid color',
+                             value = "#ffffff"
+                           )
+                       )
+  )
+  return(plotParamDiv)
+}
+
 
 shinyUI(fluidPage(
   useShinyjs(),
-  # tags$head(
-  # tags$style(
-  #   HTML(
-     inlineCSS("
+  inlineCSS("
       #sidebarPanel {
       }
-      #mainLayout {
+      #mainPanel {
         padding-top: 85px;
-        margin-top: 10px;
+        margin-top: 5px;
+        padding: 2px 5px 10px 10px;
+        margin-left: 0px;
+        margin-right: 0px;
+        background-color: #e6e6e6;
+        border: 1.5px solid #b1b3b5;
+        border-radius: 6px;
+        min-height=800px;
+        height: 100%;
       }
-      #mainPlotDiv {
+      #mainPlotDiv, #mainPlot {
           border: 1.5px solid #b1b3b5;
-          border-radius: 4px;
+          border-radius: 6px;
+          background-color: #ffffff;
+          width: 100%;
+          height: 100%;
+          min-height=800px;
       }
-      #mainPlot, #mainPanel {
-      }
-      #plotRefreshBtn {
+
+      #plotRefreshBtn, #plotExportBtn {
           background-color: #0f7ac7;
           color: #ffffff;
           margin-bottom: 5px;
+          margin-right: 10px;
           width: 300px;
           text-align: center;
           font-weight: bold;
@@ -38,56 +102,68 @@ shinyUI(fluidPage(
            background-image: linear-gradient(to right, #0f7ac7, white);
            padding: 5px 25px 5px 25px;
            color: #FFFFFF;
-           margin-bottom: 10px;
+           margin-bottom: 0px;
+      }
+      #param-panel {
+          border: 1.5px solid #b1b3b5;
+          border-radius: 6px;
+          background-color: #e6e6e6;
+          padding: 0px 5px 5px 10px;
+          margin-top: 5px;
+          float: right;
+      }
+      #secondary-param-panel {
+          border: 1.5px solid #b1b3b5;
+          border-radius: 6px;
+          background-color: #e6e6e6;
+          padding: 0px 5px 5px 10px;
+          margin-top: 5px;
+          float: left;
       }
     "),
-  #   )
-  # )),
-
-  div(
-    id = 'titlePanel',
-    titlePanel(title = "qHTS Waterfall Plot", windowTitle = "qHTS Waterfall Plot")
+  fluidRow(
+    column(12,
+           id = 'titlePanel',
+           titlePanel(title = "qHTS Waterfall Plot", windowTitle = "qHTS Waterfall Plot")
+    )
   ),
-
-
-  sidebarLayout(
-    sidebarPanel = sidebarPanel(
-      width = 4,
-      id = "sidebarPanel",
-
-      fileInput(
-        inputId = 'inputFile',
-        label = 'Select Input File',
-        multiple = FALSE,
-        accept = "*.csv",
-        width = NULL,
-        buttonLabel = "Browse...",
-        placeholder = "No file selected"
-      )
+  fluidRow(
+    column(3,
+           div(
+             id = "param-panel",
+             h3("Data Parameters"),
+             fileInput(
+               inputId = 'inputFile',
+               label = 'Select Input File',
+               multiple = FALSE,
+               accept = "*.csv",
+               width = NULL,
+               buttonLabel = "Browse...",
+               placeholder = "No file selected"
+             ))
     ),
-    mainPanel = mainPanel(
-      width = 8,
-      id = "mainPanel",
-      div(
-        id = "plotDiv",
-        h4("Plot Preview"),
-        actionButton(inputId = 'plotRefreshBtn', label =
-                       'Plot / Refresh'),
-        div(
-          id = "mainPlotDiv",
-          shinycssloaders::withSpinner(plotly::plotlyOutput(outputId = "mainPlot",
-                               width = '100%',
-                               height = '600px'))
-          # rgl::rglwidgetOutput(
-          #   outputId = "mainPlot"
-          #   #width = '100%',
-          #   #height = '600px'
-          # )
-        )
-      )
+    column(6,
+           id = "mainPanel",
+           h3("Plot Preview"),
+           actionButton(inputId = 'plotRefreshBtn', label = 'Plot / Refresh'),
+           actionButton(inputId = 'plotExportBtn', label = 'Export Plot'),
+           div(
+             id = "mainPlotDiv",
+             shinycssloaders::withSpinner(plotly::plotlyOutput(outputId = "mainPlot",
+                                                               width = '100%', height = '800px', inline=F
+             ))
+           )
     ),
-    position = 'left',
-    fluid = T
-
+    column(3,
+           div(
+             id = "secondary-param-panel",
+             h3("Plot Parameters", id="plot_params_panel"),
+             addPlotCustomizationUI()
+           ),
+    )
   )
+
 ))
+
+
+

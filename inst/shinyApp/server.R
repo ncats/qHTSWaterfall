@@ -1,11 +1,13 @@
 library(shiny)
+library(shinyjs)
 
+# builds ui elements based on input file
+addReadoutSelector <- function(status) {
 
-addReadoutSelector <- function(readouts) {
-  print("HEY I'm adding a checkbox group here, where???")
+  readouts <- status$readouts
 
-  defaultColors <- c('darkgreen', 'blue2', 'darkorange', 'deeppink3', 'deepskyblue3', 'darkorchid3',
-                     'brown3', 'aquamarine3')
+  defaultColors <<- c('darkgreen', 'blue2', 'darkorange', 'deeppink3', 'deepskyblue3', 'darkorchid3',
+                      'brown3', 'aquamarine3')
 
   colorChoosers <- list()
 
@@ -51,27 +53,39 @@ addReadoutSelector <- function(readouts) {
 
   colorDiv <- div(id="color-controls-div", colorChoosers)
 
-  #concTextBox <- textAreaInput(inputId="concTextArea",label="Log Molar Conc. Values(lowest to highest, one per row or comma separated)",cols=8, rows=15)
-  sizeParamDiv <- div(
-  h3("Point Size and Line Weight"),
-  pointSize <- sliderInput(inputId = "pointSize", label="Point Size [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T),
-  lineWeight <- sliderInput(inputId = "lineWeight", label="Line Weight [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T),
-  )
-  aspectRatioDiv <- div(
-  h3("Plot Aspect Ratio"),
-  aspectX <- selectInput(inputId="aspectX", label="X (conc.) size ratio", choices=c(1:10), selected=1),
-  aspectY <- selectInput(inputId="aspectY", label="Y (response) size ratio", choices=c(1:10), selected=1),
-  aspectZ <- selectInput(inputId="aspectZ", label="Z (plot width) size ratio", choices=c(1:10), selected=3),
-  )
-  antiAliasing <- checkboxInput(inputId="antialias", label="Antialias/Smooth Lines",value=T)
-  curvePointCount <- selectInput(inputId="curvePoints", label="Number of points to define curve fits.", choices=c(seq(25,250,25)), selected=100)
-
-  extraParamsDiv <- div( class='param_div',
-                         #concTextBox,
-                         sizeParamDiv,
-                        aspectRatioDiv,
-                         antiAliasing,
-                         curvePointCount
+  rangeDiv <- div(id = 'range_div',
+                  h4("Axis Range Parameters"),
+                  div(id = 'response_custom',
+                      checkboxInput(inputId = 'customize_response_range', label="Customize Response Axis"),
+                      hidden(rangeConfig <- div(id = 'response_range_config',
+                                                h3('Response Range Customization'),
+                                                textInput(inputId = 'response_axis_title', label = "Response Axis Title", value="Response"),
+                                                splitLayout(
+                                                  textInput(inputId = "resp_min", label = "Range Min", value = status$minResp),
+                                                  textInput(inputId = "resp_max", label = "Range Max", value = status$maxResp),
+                                                ),
+                                                splitLayout(
+                                                  textInput(inputId = "resp_tick_width", label = "Tick Width", value = 50),
+                                                  textInput(inputId = "resp_first_tick", label = "First Tick Value", value = status$minResp),
+                                                )
+                      ))
+                  ),
+                  div(id = 'conc_custom',
+                      checkboxInput(inputId = 'customize_conc_range', label="Customize Concentration Axis"),
+                      hidden(rangeConfig <- div(id = 'conc_range_config',
+                                                h3('Concentration Range Customization'),
+                                                textInput(inputId = 'conc_axis_title', label = "Concentration Axis Title", value="log10[conc], M"),
+                                                splitLayout(
+                                                  textInput(inputId = "conc_min", label = "Range Min", value = status$minConc),
+                                                  textInput(inputId = "conc_max", label = "Range Max", value = status$maxConc),
+                                                ),
+                                                splitLayout(
+                                                  textInput(inputId = "conc_tick_width", label = "Tick Width", value = 1.0),
+                                                  textInput(inputId = "conc_first_tick", label = "First Tick Value", value = round(status$minConc)),
+                                                )
+                      ))
+                  ),
+                  checkboxInput(inputId = "show_curve_index_checkbox", label="Show Curve Number Axis Labels", value=T)
   )
 
   readoutDiv <- div(
@@ -88,75 +102,14 @@ addReadoutSelector <- function(readouts) {
       inline = T
     ),
     colorDiv,
-    extraParamsDiv
+    rangeDiv
   )
 
   return(readoutDiv)
 }
 
-addPlotCustomization <- function(status) {
 
-  plotParamDiv <- div( id="detail_params",
-                       div(id='plane_colors',
-                           h3("Plot Plane Colors"),
-                           basePlaneColor <- colourpicker::colourInput(
-                             inputId = 'base_plane_color', label = 'base/bottom plane color',
-                             value = "#b8b6b6"
-                           ),
-
-                           leftPlaneColor <- colourpicker::colourInput(
-                             inputId = 'left_plane_color', label = 'left verical plane color',
-                             value = "#6e6868"
-                           ),
-
-                           rigthPlaneColor <- colourpicker::colourInput(
-                             inputId = 'right_plane_color', label = 'right verical plane color',
-                             value = "#999494"
-                           ),
-                           gridColor <- colourpicker::colourInput(
-                             inputId = 'grid_color', label = 'grid color',
-                             value = "#ffffff"
-                           )
-                       ),
-                       div(id = 'range_div',
-                           h3("Axis Range Parameters"),
-                       div(id = 'response_custom',
-                           checkboxInput(inputId = 'customize_response_range', label="Customize Response Axis"),
-                           hidden(rangeConfig <- div(id = 'response_range_config',
-                                              h3('Response Range Customization'),
-                                              textInput(inputId = 'response_axis_title', label = "Response Axis Title", value="Response"),
-                                              splitLayout(
-                                                textInput(inputId = "resp_min", label = "Range Min", value = status$minResp),
-                                                textInput(inputId = "resp_max", label = "Range Max", value = status$maxResp),
-                                              ),
-                                              splitLayout(
-                                                textInput(inputId = "resp_tick_width", label = "Tick Width", value = 50),
-                                                textInput(inputId = "resp_first_tick", label = "First Tick Value", value = status$minResp),
-                                              )
-                           ))
-                       ),
-                       div(id = 'conc_custom',
-                           checkboxInput(inputId = 'customize_conc_range', label="Customize Concentration Axis"),
-                           hidden(rangeConfig <- div(id = 'conc_range_config',
-                                              h3('Concentration Range Customization'),
-                                              textInput(inputId = 'conc_axis_title', label = "Concentration Axis Title", value="log10[conc], M"),
-                                              splitLayout(
-                                                textInput(inputId = "conc_min", label = "Range Min", value = status$minConc),
-                                                textInput(inputId = "conc_max", label = "Range Max", value = status$maxConc),
-                                              ),
-                                              splitLayout(
-                                                textInput(inputId = "conc_tick_width", label = "Tick Width", value = 1.0),
-                                                textInput(inputId = "conc_first_tick", label = "First Tick Value", value = round(status$minConc)),
-                                              )
-                           ))
-                       ),
-                       checkboxInput(inputId = "show_curve_index_checkbox", label="Show Curve Number Axis Labels", value=T)
-                       )
-  )
-  return(plotParamDiv)
-}
-
-
+# Collect parameters from UI elements prior to a plot refresh
 collectParameters <- function(input, output, status) {
 
   inputFile <- input$inputFile$datapath
@@ -164,8 +117,9 @@ collectParameters <- function(input, output, status) {
   readouts <- input$readoutCollection
   readouts <- gsub('-readout-checkbox', "", readouts)
 
-  if(length(readouts)==0) {
-    print("Message, Need to select at least one readout?")
+  if(is.null(readouts) || identical(readouts, character(0))) {
+    return(NULL)
+  } else if(length(readouts)==0) {
     showModal(modalDialog(h4("Need to select to plot at least one readout."),title="Missing Selected Readouts"))
     return(NULL)
   } else {
@@ -179,44 +133,11 @@ collectParameters <- function(input, output, status) {
     }
 
     plotInactives <- input[['plot-inactives-checkbox']]
-    print(plotInactives)
     if(plotInactives) {
       inactiveColor = input[['inactive-point-color']]
     } else {
       inactiveColor = 'gray'
     }
-
-    #concentrations
-    # concText <- input$concTextArea
-    #
-    # if(length(grep(',',concText)) > 0) {
-    #   concVals <- strsplit(concText, ",")
-    # } else {
-    #   concVals <- strsplit(concText, "\n")
-    # }
-    #
-    # if(!is.null(concVals)) {
-    #   concVals <- unlist(concVals)
-    # }
-    #
-    # if(!is.null(concVals) && length(concVals) > 1) {
-    #   concValues <- trimws(concVals)
-    #   concVals <- as.numeric(concVals)
-    #   naCount <- sum(is.na(concVals))
-    #   if(naCount > 0) {
-    #     vOrVs <- ' value'
-    #     if(naCount > 1) {
-    #       vOrVs <- ' values'
-    #     }
-    #     print("Message, some concentrations are not numbers.")
-    #     showModal(modalDialog(h4(paste0("Some concentrations (",naCount,vOrVs,") are not numeric. Please remove/edit incorrect values.")), title="Invalid Concentration Values"))
-    #     return(NULL)
-    #   }
-    # } else {
-    #   print("Message, hey we need concentration values?")
-    #   showModal(modalDialog(h4("Please provide log-molar concentrations for the data set."),title="Missing Concentration Values"))
-    #   return(NULL)
-    # }
 
     pointSize <- input$pointSize
     lineWeight <- input$lineWeight
@@ -257,7 +178,6 @@ collectParameters <- function(input, output, status) {
     axisTitles[['respTitle']] <- input$response_axis_title
     axisTitles[['curveTitle']] <- ""
 
-
     props <- list(inputFile = inputFile,
                   fileFormat = status$fileFormat,
                   activityReadouts = readouts,
@@ -278,58 +198,128 @@ collectParameters <- function(input, output, status) {
                   showCurveNumberLabels = showCurveNumberLabels,
                   concAxisConfig = concAxisConfig,
                   responseAxisConfig = responseAxisConfig)
-
   }
-
-  print("Props...")
-  print(props)
-
-
   return(props)
 }
 
+
+# refesh plot, either initial plot or user triggered refresh
+plotRefresh <- function(input, output, status){
+
+  props <- collectParameters(input=input, output=output, status)
+
+  if(!is.null(props)) {
+
+    # This block runs if we have props, indicating user selected update/refresh.
+    p <- qHTSWaterfall::plotWaterfall(inputFile = props$inputFile,
+                                      fileFormat = props$fileFormat,
+                                      activityReadouts = props$activityReadouts,
+                                      logMolarConcVector = props$logMolarConcVector,
+                                      pointColors = props$pointColors,
+                                      curveColors = props$curveColors,
+                                      inactiveColor = props$inactiveColor,
+                                      alpha=1,
+                                      pointSize = props$pointSize,
+                                      lineWeight = props$lineWeight,
+                                      plotInactivePoints = props$plotInactivePoints,
+                                      curveResolution = props$curveResolution,
+                                      plotAspectRatio = props$plotAspectRatio,
+                                      returnPlotObject = T,
+                                      axisTitles = props$axisTitles,
+                                      planeColors = props$planeColors,
+                                      gridColor = props$gridColor,
+                                      showCurveNumberLabels = props$showCurveNumberLabels,
+                                      concAxisConfig = props$concAxisConfig,
+                                      responseAxisConfig = props$responseAxisConfig
+    )
+
+
+  }  else {
+
+    # Build a default starting plot
+    # We hit this option if a file has been selected, but UI controls are still being constructed.
+    p <- qHTSWaterfall::plotWaterfall(inputFile = status$inputFile,
+                                      fileFormat = status$fileFormat,
+                                      activityReadouts = status$readouts,
+                                      logMolarConcVector = status$logConc,
+                                      pointColors = status$defaultColors,
+                                      curveColors = status$defaultColors,
+                                      returnPlotObject = T
+    )
+  }
+
+  output$mainPlot <- plotly::renderPlotly(p)
+
+}
+
+
+# exports plot... working on solution....
+savePlot <- function(p) {
+
+  # interactive plots in plotly have no direct R methods to
+  # export in formats other than low res png
+  # other systems have supported this in the past, mostly on the python side of plotly
+  # first, kaleido, the orca command line tool.
+  # certain utilities may exist for paid subscriptions to plotly
+  #
+
+  # pdf(file = "/Users/braistedjc/Desktop/My_Plot.pdf",   # The directory you want to save the file in
+  #     width = 4, # The width of the plot in inches
+  #     height = 4) # The height of the plot in inches
+  #
+  # p
+  #
+  # dev.off()
+
+}
+
+
+
+####################################
+#
+#
+# Main server method, includes various 'observers' to react to input.
+#
+#
+####################################
 server <- function(input, output, session) {
 
 
   disable(id='plotRefreshBtn')
+  disable(id='plotExportBtn')
+
 
   status <- ""
 
   wfPoints <- reactiveVal(0)
   wfLines <- reactiveVal(0)
 
+  # Input file selected, initialize status and build initial plot.................
   observeEvent(input$inputFile, {
 
-
-    print(input$inputFile)
-    print(input$datapath)
-    print(input$name)
-
     status <<- qHTSWaterfall:::evaluateInputFile(input$inputFile$datapath)
-    print(status$readouts)
-    print(status$valid)
-    print(status$problem)
 
     if(!status$valid) {
       showModal(modalDialog(h4(status$problem),title="File Format Problem"))
       return(NULL)
     }
 
-
     if(length(status$readouts) > 0) {
-      insertUI(ui=addReadoutSelector(status$readouts), selector='#inputFile_progress', where='afterEnd')
-      insertUI(ui = addPlotCustomization(status), selector="#readout_params", where='afterEnd')
-    }
+      enable(id='plotRefreshBtn')
 
-    enable(id='plotRefreshBtn')
+      # coming soon...
+      #enable(id='plotExportBtn')
+
+      insertUI(ui=tags$div(addReadoutSelector(status)), selector='#inputFile_progress', where='afterEnd', immediate=F)
+      plotRefresh(input, output, status)
+    }
 
   }, ignoreNULL = TRUE)
 
 
-
+  # selection made to the plotInactives checkbox................
   observeEvent(input[["plot-inactives-checkbox"]],
                {
-                 print("in inactives listener...")
                  if((input[["plot-inactives-checkbox"]])) {
                    shinyjs::show('inactive-color-div')
                  } else {
@@ -340,6 +330,7 @@ server <- function(input, output, session) {
 
 
 
+  # selection made to input checkboxes..................
   observeEvent(input$readoutCollection, {
 
     if(is.null(input$readoutCollection)) {
@@ -378,6 +369,7 @@ server <- function(input, output, session) {
   )
 
 
+  # checkbox selected to update the concentration range parameters.........
   observeEvent(input$customize_conc_range, {
     if(input$customize_conc_range) {
       shinyjs::show("conc_range_config")
@@ -386,6 +378,7 @@ server <- function(input, output, session) {
     }
   })
 
+  # checkbox selected to update the response range parameters.........
   observeEvent(input$customize_response_range, {
     if(input$customize_response_range) {
       shinyjs::show("response_range_config")
@@ -394,8 +387,13 @@ server <- function(input, output, session) {
     }
   })
 
+  # button hit to refresh plot................
+  observeEvent(input$plotRefreshBtn,
+               plotRefresh(input, output, status)
+  )
 
-  observeEvent(input$plotRefreshBtn, {
+  # button hit to export plot..................
+  observeEvent(input$plotExportBtn, {
     props <- collectParameters(input=input, output=output, status)
 
     if(is.null(props)) {
@@ -423,18 +421,13 @@ server <- function(input, output, session) {
                                         concAxisConfig = props$concAxisConfig,
                                         responseAxisConfig = props$responseAxisConfig
       )
-      output$mainPlot <- plotly::renderPlotly(p)
 
-      # output$mainPlot <- rgl::renderRglwidget(
-      #   expr ={
-      #     scene
-      #     rgl::rglwidget()
-      #   }
-      # )
+      savePlot(p)
     }
   }
   )
 
+  # Application closed, stut down gracefully.............
   session$onSessionEnded(function() {
     stopApp()
   })
