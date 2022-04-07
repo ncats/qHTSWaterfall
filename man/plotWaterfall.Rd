@@ -106,6 +106,7 @@ logConc <- c(
 # 3D Plot will be presented in a separate window.
 plotWaterfall(
   inputFile=filePath,
+  fileFormat = 'ncats_qhts',
   activityReadouts = c("fluc", "nluc"),
   logMolarConcVector = logConc,
   pointColors = c("darkgreen", "royalblue3"),
