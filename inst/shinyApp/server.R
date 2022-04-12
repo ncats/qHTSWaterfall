@@ -6,8 +6,10 @@ addReadoutSelector <- function(status) {
 
   readouts <- status$readouts
 
-  defaultColors <<- c('darkgreen', 'blue2', 'darkorange', 'deeppink3', 'deepskyblue3', 'darkorchid3',
-                      'brown3', 'aquamarine3')
+  defaultColors <<- c('darkgreen', 'blue4', 'red4', 'gold3', 'darkseagreen4', 'deeppink3', 'deepskyblue3', 'darkorchid3',
+                      'aquamarine4', 'darkorange3', 'sienna4', 'seagreen3', 'lemonchiffon4', 'lightskblue2',
+                      'palegreen3', 'palevioletred3', 'peru', 'orangered3', 'purple4', 'gray20',
+                      'plum3', 'wheat4', 'steelblue4', 'lightgoldenrod')
 
   colorChoosers <- list()
 
@@ -60,13 +62,13 @@ addReadoutSelector <- function(status) {
                       hidden(rangeConfig <- div(id = 'response_range_config',
                                                 h3('Response Range Customization'),
                                                 textInput(inputId = 'response_axis_title', label = "Response Axis Title", value="Response"),
-                                                splitLayout(
+                                                splitLayout(cellWidths = c("50%", "50%"),
                                                   textInput(inputId = "resp_min", label = "Range Min", value = status$minResp),
-                                                  textInput(inputId = "resp_max", label = "Range Max", value = status$maxResp),
+                                                  textInput(inputId = "resp_max", label = "Range Max", value = status$maxResp)
                                                 ),
-                                                splitLayout(
+                                                splitLayout(cellWidths = c("50%", "50%"),
                                                   textInput(inputId = "resp_tick_width", label = "Tick Width", value = 50),
-                                                  textInput(inputId = "resp_first_tick", label = "First Tick Value", value = status$minResp),
+                                                  textInput(inputId = "resp_first_tick", label = "First Tick Value", value = status$minResp)
                                                 )
                       ))
                   ),
@@ -75,13 +77,13 @@ addReadoutSelector <- function(status) {
                       hidden(rangeConfig <- div(id = 'conc_range_config',
                                                 h3('Concentration Range Customization'),
                                                 textInput(inputId = 'conc_axis_title', label = "Concentration Axis Title", value="log10[conc], M"),
-                                                splitLayout(
+                                                splitLayout(cellWidths = c("50%", "50%"),
                                                   textInput(inputId = "conc_min", label = "Range Min", value = status$minConc),
-                                                  textInput(inputId = "conc_max", label = "Range Max", value = status$maxConc),
+                                                  textInput(inputId = "conc_max", label = "Range Max", value = status$maxConc)
                                                 ),
-                                                splitLayout(
+                                                splitLayout(cellWidths = c("50%", "50%"),
                                                   textInput(inputId = "conc_tick_width", label = "Tick Width", value = 1.0),
-                                                  textInput(inputId = "conc_first_tick", label = "First Tick Value", value = round(status$minConc)),
+                                                  textInput(inputId = "conc_first_tick", label = "First Tick Value", value = round(status$minConc))
                                                 )
                       ))
                   ),
@@ -99,7 +101,7 @@ addReadoutSelector <- function(status) {
       width = '400px',
       choiceNames = readouts,
       choiceValues = readoutBoxIds,
-      inline = T
+      inline = F
     ),
     colorDiv,
     rangeDiv
@@ -284,10 +286,10 @@ savePlot <- function(p) {
 ####################################
 server <- function(input, output, session) {
 
+  options(shiny.maxRequestSize=30*1024^2)
 
   disable(id='plotRefreshBtn')
   disable(id='plotExportBtn')
-
 
   status <- ""
 

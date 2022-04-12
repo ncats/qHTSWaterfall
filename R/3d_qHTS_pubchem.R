@@ -80,13 +80,12 @@ extractReadoutColumns <- function(colList, readout, colKey) {
 #' }
 #' @export
 plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts = c('Activity'), logMolarConcVector,
-                          pointColors=c('darkgreen','royalblue3'), curveColors=c('darkgreen', 'royalblue3'),
+                          pointColors=c('darkgreen','blue4'), curveColors=c('darkgreen', 'blue4'),
                           inactiveColor='gray', alpha=1, pointSize=1.0, lineWeight=1.5, plotInactivePoints=T, curveResolution=25,
                           plotAspectRatio=c(1,1,3), antialiasSmoothing = F, returnPlotObject = F,
                           axisTitles = list(concTitle="log2[Conc], M", respTitle="Response", curveTitle=""),
                           planeColors = list(basePlaneColor="#b8b6b6", rightPlaneColor="#999494", leftPlaneColor="#6e6868"),
                           gridColor = "#ffffff", showCurveNumberLabels = TRUE, concAxisConfig = NULL, responseAxisConfig = NULL) {
-
 
   if(fileFormat == 'ncats_qhts') {
     generic_data <- 0
@@ -213,21 +212,21 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     #   cdata_curves[[currReadout]]$readout <- currReadout
     # }
 
- # } else {
-    dataCols <- NULL
-    for(i in 1:length(conc)){
-      dataCols[i] <- c(paste("Data",(i-1), sep=""))
-    }
-    all_cdata_points <- cdata[,c(fit, compId, readout, dataCols)]
-    all_cdata_curves <- cdata[,c(fit, compId, readout, lac50, hill, inf, zero)]
 
-    # partition the data by readout
-    for(currReadout in activityReadouts) {
-      cdata_points[[currReadout]] <- subset(all_cdata_points, all_cdata_points[[readout]] == currReadout)
-      cdata_curves[[currReadout]] <- subset(all_cdata_curves, all_cdata_curves[[readout]] == currReadout)
-      colnames(cdata_curves[[currReadout]]) <- c("Fit_Output", "COMP_ID", "readout", "LAC50", "HILL", "INF", "ZERO")
-    }
-#  }
+  dataCols <- NULL
+  for(i in 1:length(conc)){
+    dataCols[i] <- c(paste("Data",(i-1), sep=""))
+  }
+  all_cdata_points <- cdata[,c(fit, compId, readout, dataCols)]
+  all_cdata_curves <- cdata[,c(fit, compId, readout, lac50, hill, inf, zero)]
+
+  # partition the data by readout
+  for(currReadout in activityReadouts) {
+    cdata_points[[currReadout]] <- subset(all_cdata_points, all_cdata_points[[readout]] == currReadout)
+    cdata_curves[[currReadout]] <- subset(all_cdata_curves, all_cdata_curves[[readout]] == currReadout)
+    colnames(cdata_curves[[currReadout]]) <- c("Fit_Output", "COMP_ID", "readout", "LAC50", "HILL", "INF", "ZERO")
+  }
+
 
 
   #titration points to be put on the graph ---------------------------------------
@@ -348,7 +347,6 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   #   }
   # }
 
-
   # Reworked point methods, only iterates over readouts and checks inactives, about 6x faster for a 15K point set
   # The relitive improvement will increase for very large data sets, because we no longer iterate over all points, but rather subset.
   for(readout in keyReadouts) {
@@ -360,7 +358,6 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     readoutData <- waterfall_POINTS_data[waterfall_POINTS_data$Fit_Output == 0, c('x','y','z')]
     waterfallPoints[['inactive']] <- readoutData
   }
-
 
   #taking care of missing data ---------------------------------------------------
   cdata_curves$LAC50[is.na(cdata_curves$LAC50)] <- log10(10)
@@ -378,6 +375,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     currCurveSet <- cdata_curves[[currReadout]]
     curveCount = readoutCount
     l <- nrow(currCurveSet)
+
     for (i in 1:l) {
 
       currReadout = currCurveSet[i,"readout"]
@@ -386,14 +384,11 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
 
         wfLines <- waterfallLines[[currReadout]]
 
-        #    if(cdata_curves[i,"Fit_Output"]==1 && cdata_curves[i,"readout"]==keyword_1) {
-        rowIndex = rowIndex+1
         d1 <- data.frame(f(currCurveSet[i,], c(minConc[[currReadout]], maxConc[[currReadout]])), z=i)
-
-        #add multiple rows
-        wfLines <- dplyr::bind_rows(wfLines, data.frame(x=d1[,1], z=curveCount, y=d1[,2]))
-        #needed for break mechanic when graphing
-        wfLines <- dplyr::bind_rows(wfLines, data.frame(x=NA, z=NA, y=1))
+        if(nrow(currCurveSet) > 1) {
+          wfLines <- dplyr::bind_rows(wfLines, data.frame(x=d1[,1], z=curveCount, y=d1[,2]))
+          wfLines <- dplyr::bind_rows(wfLines, data.frame(x=NA, z=NA, y=1))
+        }
         waterfallLines[[currReadout]] <- wfLines
         curveCount <- curveCount + numReadouts
       }
@@ -419,8 +414,6 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   }
 
   TimeAfterCurveBuild <- Sys.time()
-
-
 
   #correcting data type if needed
   # mainMatrix$x <- as.double(mainMatrix$x)
@@ -463,17 +456,22 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
 
   # graph view coordinates
 
-  TimeJustBeforePlotlyDataBuild <- Sys.time()
-
   # Plotly...
   resIndex = 1
 
+
   # prepare lines data
   for(n in names(waterfallLines)) {
+
+    if(nrow(waterfallLines[[n]]) < 1) {
+      next
+    }
+
     d <- waterfallLines[[n]]
     d$readout <- n
     d2 <- waterfallPoints[[n]]
     d2$readout <- n
+
     if(resIndex == 1) {
       wfl <- d
       wfp <- d2
@@ -501,8 +499,6 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   } else {
     pointPal <- setNames(pointPal, activityReadouts)
   }
-
-
 
   # right verical plane
   # default #999494
@@ -585,73 +581,6 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
                                  type='scatter3d', mode='markers', marker = list(size=pointSize), inherit=F)
 
   return(p)
-
-
-  #camera = list(eye = list(x = 1.25, y = 1.25, z = 1.25))
-
-  # rgl code
-
-#   newMatrix = t(matrix(c(-0.6416085, 0.01792431, -0.7668231,  0, -0.1346225, 0.98157728,  0.1355843,  0,
-#                          0.7551258, 0.19022357, -0.6273754,  0, 0.0000000, 0.00000000,  0.0000000,  1),
-#                        ncol = 4, nrow =4))
-#
-#   my3d <- ""
-#   if(returnPlotObject) {
-#     print("returning plot object")
-#     newWindowRect = c(0, 0, 1000, 1000)
-#     my3d <- rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect, silent=T, useNULL = T)
-#   } else {
-#     newWindowRect = c(138, 161, 938, 661)
-#     rgl::open3d(userMatrix = newMatrix, windowRect = newWindowRect)
-#   }
-#
-#   #PLOTTING POINTS IN 3D GRAPH ---------------------------------------------------
-#   start = Sys.time()
-#
-#   if(plotPoints) {
-#     totPointsProcessed = 0
-#     for(i in 1:length(waterfallPoints))
-#     {
-#       m <- waterfallPoints[[i]]
-#       currentColor = pointColors[i]
-#       rgl::points3d(x=m$x, y=m$y, z=m$z, col = currentColor, size = pointSize)
-#       #rgl::spheres3d(x=m$x, y=m$y, z=m$z, col = currentColor, radius = pointSize)
-#       totPointsProcessed = totPointsProcessed + 1
-#     }
-#   }
-#
-#
-#   for(i in 1:length(waterfallLines))
-#   {
-#     m <- waterfallLines[[i]]
-#     currentColor = lineColors[i]
-#     rgl::lines3d(x=m$x, y=m$y, z=m$z, col = currentColor, alpha=alpha_1, lwd=lineWeight)
-#   }
-#
-#   #CREATE BOX AROUND EDGES FOR THE GRAPH -----------------------------------------
-#
-#   rgl::aspect3d(plotAspectRatio[1],plotAspectRatio[2],plotAspectRatio[3])
-#
-#   rgl::grid3d(side=c("x--","y--","z+-"))
-#
-#   rgl::axes3d(expand = 1.03, box = T, xunit = 6, yunit = "pretty", zunit = 'pretty', nticks = 6,
-#              xlab="Log(conc),M", ylab="Response", zlab="Comp", edges=c("x--","y--","z+-"), floating=TRUE)
-#
-#
-#   rgl::grid3d(side=c("x--","y--","z+-"))
-#
-#
-#
-# #
-# #   wid <- rgl::rglwidget(webgl=T)
-# #   wid
-#   if(returnPlotObject) {
-#     # on.exit(expr={ close3d() })
-#     return(scene3d())
-#   } else {
-#     rgl.bringtotop()
-#   }
-
 }
 
 
@@ -724,8 +653,24 @@ evaluateInputFile <- function(filePath) {
   status$concLength <- length(concVector)
 
   # capture optimal initial concRange
-  status$minConc <- ceiling(min(concVector))
-  status$maxConc <- floor(max(concVector))
+  minConc <- min(concVector)
+  maxConc <- max(concVector)
+
+  minConcRange <- floor(minConc)
+  maxConcRange <- ceiling(maxConc)
+
+  if(minConc - minConcRange > 0.5) {
+    minConcRange = minConcRange + 0.5
+  }
+
+  if(maxConcRange-maxConc > 0.5) {
+    maxConcRange = maxConcRange - 0.5
+  }
+
+  status$minConc <- minConcRange
+  status$maxConc <- maxConcRange
+
+
 
   # set reasonable bounds for the range min and max
   respLimits <- evalDataRange(filePath, concVector)
@@ -754,8 +699,11 @@ evaluateInputFile <- function(filePath) {
 
 
     # set default colors
-    defaultColors <- c('darkgreen', 'blue2', 'darkorange', 'deeppink3', 'deepskyblue3', 'darkorchid3',
-                        'brown3', 'aquamarine3')
+    defaultColors <<- c('darkgreen', 'blue4', 'red4', 'gold3', 'darkseagreen4', 'deeppink3', 'deepskyblue3', 'darkorchid3',
+                        'aquamarine4', 'darkorange3', 'sienna4', 'seagreen3', 'lemonchiffon4', 'lightskblue2',
+                        'palegreen3', 'palevioletred3', 'peru', 'orangered3', 'purple4', 'gray20',
+                        'plum3', 'wheat4', 'steelblue4', 'lightgoldenrod')
+
 
     status$defaultColors <- defaultColors[1:length(readouts)]
 
@@ -772,8 +720,8 @@ evalDataRange <- function(filePath, conc) {
     dataCols <- c(dataCols, paste("Data",(i-1), sep=""))
   }
 
-  responseData <- as.matrix(cdata[,dataCols])
-  rangeQuantiles <- quantile(responseData, probs <- c(0.02, 0.98), na.rm=T)
+  responseData <- as.matrix(cdata[,dataCols[length(dataCols)]])
+  rangeQuantiles <- quantile(responseData, probs <- c(0.01, 0.99), na.rm=T)
   lowerLimit <- rangeQuantiles[[1]]
   if(lowerLimit < 0) {
     lowerLimit <- ceiling(lowerLimit)

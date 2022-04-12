@@ -120,6 +120,10 @@ shinyUI(fluidPage(
           margin-top: 5px;
           float: left;
       }
+      #readoutCollection {
+          margin-left: 0px;
+          margin-right: 10px;
+      }
     "),
   fluidRow(
     column(12,
