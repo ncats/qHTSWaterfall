@@ -52,8 +52,10 @@ addPlotCustomizationUI <- function() {
   return(plotParamDiv)
 }
 
+sampleData <<- system.file("extdata", "Generic_qHTS_Format_Example.csv", package="qHTSWaterfall")
 
-shinyUI(fluidPage(
+shinyUI(
+  fluidPage(
   useShinyjs(),
   inlineCSS("
       #sidebarPanel {
@@ -147,7 +149,8 @@ shinyUI(fluidPage(
            div(
              id = "param-panel",
              h3("Data Parameters"),
-             actionButton(inputId = 'sampleDataBtn', label = 'Try Our Sample Data'),
+             actionButton(inputId = 'sampleDataBtn', label = 'Plot Our Sample Data'),
+             downloadLink(outputId='sampleDataDownload', label="Download Sample Input Data"),
              h4(id="or","or"),
              fileInput(
                inputId = 'inputFile',

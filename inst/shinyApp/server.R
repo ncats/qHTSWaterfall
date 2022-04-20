@@ -137,7 +137,12 @@ collectParameters <- function(input, output, status) {
   if(newData == TRUE && is.null(input$readoutCollection)) {
     return(NULL)
   } else if(length(readouts)==0 || identical(readouts, character(0))) {
-    showModal(modalDialog(h4("Need to select to plot at least one readout."),title="Missing Selected Readouts"))
+    if(!newData) {
+      showModal(modalDialog(h4('You need to select to plot at least one readout.'),
+                            tags$h4("The ", tags$i(tags$strong("Select Readouts to Plot")), " checkboxes are to the left."),
+                            h4(paste0("Please Select one or more of your readouts: ", paste0(status$readouts,collapse = ', '))),
+                            title="No Readouts Selected Warning"))
+    }
     return(NULL)
   } else {
     pointColors <- c()
@@ -319,7 +324,6 @@ sampleDataDialog <- function() {
 
 
 plotSampleData <- function(input, output, sampleData) {
-  newData <<- FALSE
 
   print("plotting sample data")
   print(sampleData)
@@ -353,10 +357,34 @@ plotSampleData <- function(input, output, sampleData) {
 
     insertUI(ui=tags$div(addReadoutSelector(status)), selector='#inputFile_progress', where='afterEnd', immediate=F)
     plotRefresh(input, output, status, newData)
+
+    newData <<- FALSE
   }
 }
 
-downloadSampleData <- function() {
+downloadSampleData <- function(output, sampleDataFile) {
+
+  print("In download file")
+  print(sampleDataFile)
+
+  # downloadHandler(
+  #   filename = sampleDataFile,
+  #   content = function(file) {
+  #     file.copy("generic_qhts_data.txt", file)
+  #     #write.csv(sampleData, file, row.names = FALSE)
+  #   },
+  #   contentType = "text/csv"
+  # )
+
+  downloadHandler(
+    filename = "generic_qhts_data.txt",
+    content = function(file) {
+      file.copy(sampleData, "generic_qhts_data.txt")
+      #write.csv(sampleData, file, row.names = FALSE)
+    }
+    ,
+    contentType = "text/csv"
+  )
 
 }
 
@@ -458,24 +486,41 @@ server <- function(input, output, session) {
 
   observeEvent(input[["sampleDataBtn"]],
                {
+                 usingSampleData <<- TRUE
+                 newData <<- TRUE
+
+                 plotSampleData(input, output, sampleData)
+
                  print("hit sample data button")
-                 sampleDataDialog()
+                 #sampleDataDialog()
                }
                ,ignoreNULL = TRUE
                )
 
+  # observeEvent(input[["sampleDataDownload"]],
+  #
+  #              )
 
-  observeEvent(input[["ok_sample_data"]],
-               {
-                 if(input[["sample_data_radio_btns"]] == 'plot_data') {
-                   usingSampleData <<- TRUE
-                   newData <<- TRUE
-                   plotSampleData(input, output, sampleData)
-                 } else {
-                   downloadSampleData()
-                 }
-                 removeModal()
-               },ignoreNULL = TRUE)
+
+  output$sampleDataDownload <- downloadHandler(
+     filename = function() {
+       "qHTS_Generic_Data_Sample.csv"
+     },
+     content = function(con) {
+       print("Hey im in download handler... I'm about to copy file...")
+       file.copy(sampleData, con)
+     }
+  )
+
+  # observeEvent(input[["ok_sample_data"]],
+  #              {
+  #                #if(input[["sample_data_radio_btns"]] == 'plot_data') {
+  #                 # usingSampleData <<- TRUE
+  #                 # newData <<- TRUE
+  #                 # plotSampleData(input, output, sampleData)
+  #                #}
+  #                #removeModal()
+  #              },ignoreNULL = TRUE)
 
 
 
