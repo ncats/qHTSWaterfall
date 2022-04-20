@@ -4,7 +4,6 @@ library(shinyjs)
 
 addPlotCustomizationUI <- function() {
 
-
   sizeParamDiv <- div(
     h3("Point Size and Line Weight"),
     pointSize <- sliderInput(inputId = "pointSize", label="Point Size [0 to 5.0]", min=0.0, max=5.0, value=1.0, step=0.1, round=T),
@@ -19,15 +18,12 @@ addPlotCustomizationUI <- function() {
   antiAliasing <- checkboxInput(inputId="antialias", label="Antialias/Smooth Lines",value=T)
   curvePointCount <- selectInput(inputId="curvePoints", label="Number of points to define curve fits.", choices=c(seq(25,250,25)), selected=100)
 
-
-
   extraParamsDiv <- div( class='param_div',
                          sizeParamDiv,
                          aspectRatioDiv,
                          antiAliasing,
                          curvePointCount
   )
-
 
   plotParamDiv <- div( id="detail_params",
                        extraParamsDiv,
@@ -124,6 +120,21 @@ shinyUI(fluidPage(
           margin-left: 0px;
           margin-right: 10px;
       }
+      #sampleDataBtn {
+          background-color: #8FBC8F;
+          margin-left: 0px;
+          margin-right: 10px;
+          margin-top: 5px;
+          margin-botom: 5px;
+          width: 100%;
+
+          display: inline-block;
+          vertical-align: top;
+      }
+      #or {
+          text-align: center;
+          font-weight: bold;
+      }
     "),
   fluidRow(
     column(12,
@@ -136,15 +147,18 @@ shinyUI(fluidPage(
            div(
              id = "param-panel",
              h3("Data Parameters"),
+             actionButton(inputId = 'sampleDataBtn', label = 'Try Our Sample Data'),
+             h4(id="or","or"),
              fileInput(
                inputId = 'inputFile',
-               label = 'Select Input File',
+               label = 'Select Your Input File',
                multiple = FALSE,
                accept = "*.csv",
                width = NULL,
                buttonLabel = "Browse...",
                placeholder = "No file selected"
-             ))
+             )
+           )
     ),
     column(6,
            id = "mainPanel",

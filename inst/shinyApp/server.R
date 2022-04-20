@@ -114,14 +114,29 @@ addReadoutSelector <- function(status) {
 # Collect parameters from UI elements prior to a plot refresh
 collectParameters <- function(input, output, status) {
 
-  inputFile <- input$inputFile$datapath
+  if(usingSampleData) {
+    inputFile <- sampleData
+  } else {
+    inputFile <- input$inputFile$datapath
+  }
+
+  # try to get the input file from the current status
+  # if it's not set in the ui
+  # if(is.null(inputFile) && !is.null(status) && !is.null(status$inputFile)) {
+  #   inputFile <- status$inputFile
+  #   input$inputFile$datapath <- inputFile
+  # }
 
   readouts <- input$readoutCollection
   readouts <- gsub('-readout-checkbox', "", readouts)
 
-  if(is.null(readouts) || identical(readouts, character(0))) {
+  print("collect params ro-collection and then readouts:")
+  print(input$readoutCollection)
+  print(readouts)
+
+  if(newData == TRUE && is.null(input$readoutCollection)) {
     return(NULL)
-  } else if(length(readouts)==0) {
+  } else if(length(readouts)==0 || identical(readouts, character(0))) {
     showModal(modalDialog(h4("Need to select to plot at least one readout."),title="Missing Selected Readouts"))
     return(NULL)
   } else {
@@ -206,11 +221,32 @@ collectParameters <- function(input, output, status) {
 
 
 # refesh plot, either initial plot or user triggered refresh
-plotRefresh <- function(input, output, status){
+plotRefresh <- function(input, output, status, newData){
 
-  props <- collectParameters(input=input, output=output, status)
+  doRefresh = TRUE
+  props = NULL
+  p = NULL
+
+  if(!newData) {
+    currProps <- collectParameters(input=input, output=output, status)
+    if(is.null(currProps)) {
+      doRefresh = FALSE
+      props <- NULL
+    } else {
+      props <- currProps
+      newData <<- FALSE
+    }
+  } else {
+    props <- NULL
+  }
+
+  print("in refresh plot newData????")
+  print(newData)
 
   if(!is.null(props)) {
+
+    if(!doRefresh)
+      return(NULL)
 
     # This block runs if we have props, indicating user selected update/refresh.
     p <- qHTSWaterfall::plotWaterfall(inputFile = props$inputFile,
@@ -236,7 +272,11 @@ plotRefresh <- function(input, output, status){
     )
 
 
-  }  else {
+  }  else if(newData) {
+
+    if(!doRefresh) {
+      return(NULL)
+    }
 
     # Build a default starting plot
     # We hit this option if a file has been selected, but UI controls are still being constructed.
@@ -250,10 +290,75 @@ plotRefresh <- function(input, output, status){
     )
   }
 
-  output$mainPlot <- plotly::renderPlotly(p)
-
+  if(!is.null(p)) {
+    output$mainPlot <- plotly::renderPlotly(p)
+  }
+  newData <<- FALSE
 }
 
+sampleDataDialog <- function() {
+  print("sample data dialog function start")
+
+  showModal(
+    modalDialog(label="Use Sample Data",
+                h4("Select to either plot or download an example data file."),
+                radioButtons(inputId = "sample_data_radio_btns",
+                             label = "",
+                             choiceNames=c("Plot Sample Data",
+                                           "Download Sample Data File"),
+                             choiceValues=c("plot_data", "download_data"),
+                             selected = "plot_data"),
+                size='m',
+                footer = tagList(
+                  modalButton("Cancel"),
+                  actionButton("ok_sample_data", "OK")
+                )
+    )
+  )
+}
+
+
+plotSampleData <- function(input, output, sampleData) {
+  newData <<- FALSE
+
+  print("plotting sample data")
+  print(sampleData)
+
+  if(!is.null(status)) {
+    # if the input file represents a file change, remove the UI for readouts, then rebuild
+    # removing ui
+    print("Removing old readout UI elements")
+    removeUI(selector='#readout_params', immediate=T)
+    status <<- NULL
+    newData <<- TRUE
+  } else {
+
+  }
+
+  status <<- qHTSWaterfall:::evaluateInputFile(sampleData)
+  status$inputFile <- sampleData
+
+
+
+  if(!status$valid) {
+    showModal(modalDialog(h4(status$problem),title="File Format Problem"))
+    return(NULL)
+  }
+
+  if(length(status$readouts) > 0) {
+    enable(id='plotRefreshBtn')
+
+    # coming soon...
+    #enable(id='plotExportBtn')
+
+    insertUI(ui=tags$div(addReadoutSelector(status)), selector='#inputFile_progress', where='afterEnd', immediate=F)
+    plotRefresh(input, output, status, newData)
+  }
+}
+
+downloadSampleData <- function() {
+
+}
 
 # exports plot... working on solution....
 savePlot <- function(p) {
@@ -291,13 +396,32 @@ server <- function(input, output, session) {
   disable(id='plotRefreshBtn')
   disable(id='plotExportBtn')
 
-  status <- ""
+  status <<- NULL
+  usingSampleData <<- FALSE
+  newData <<- TRUE
+
+  sampleData <<- system.file("extdata", "Generic_qHTS_Format_Example.csv", package="qHTSWaterfall")
 
   wfPoints <- reactiveVal(0)
   wfLines <- reactiveVal(0)
 
   # Input file selected, initialize status and build initial plot.................
   observeEvent(input$inputFile, {
+
+    print("in input file trigger event")
+
+    usingSampleData <<- FALSE
+
+    if(!is.null(status)) {
+      # if the input file represents a file change, remove the UI for readouts, then rebuild
+      # removing ui
+      print("Removing old readout UI elements")
+      removeUI(selector='#readout_params', immediate=T)
+      status <<- NULL
+      newData <<- TRUE
+    } else {
+      print("Hey is status really NULL??????")
+    }
 
     status <<- qHTSWaterfall:::evaluateInputFile(input$inputFile$datapath)
 
@@ -313,7 +437,7 @@ server <- function(input, output, session) {
       #enable(id='plotExportBtn')
 
       insertUI(ui=tags$div(addReadoutSelector(status)), selector='#inputFile_progress', where='afterEnd', immediate=F)
-      plotRefresh(input, output, status)
+      plotRefresh(input, output, status, newData)
     }
 
   }, ignoreNULL = TRUE)
@@ -329,6 +453,30 @@ server <- function(input, output, session) {
                  }
                }
                ,ignoreInit=TRUE)
+
+
+
+  observeEvent(input[["sampleDataBtn"]],
+               {
+                 print("hit sample data button")
+                 sampleDataDialog()
+               }
+               ,ignoreNULL = TRUE
+               )
+
+
+  observeEvent(input[["ok_sample_data"]],
+               {
+                 if(input[["sample_data_radio_btns"]] == 'plot_data') {
+                   usingSampleData <<- TRUE
+                   newData <<- TRUE
+                   plotSampleData(input, output, sampleData)
+                 } else {
+                   downloadSampleData()
+                 }
+                 removeModal()
+               },ignoreNULL = TRUE)
+
 
 
 
@@ -390,8 +538,10 @@ server <- function(input, output, session) {
   })
 
   # button hit to refresh plot................
-  observeEvent(input$plotRefreshBtn,
-               plotRefresh(input, output, status)
+  observeEvent(input$plotRefreshBtn, {
+    newData <<- FALSE
+    plotRefresh(input, output, status, FALSE)
+  }
   )
 
   # button hit to export plot..................

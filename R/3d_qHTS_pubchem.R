@@ -79,7 +79,7 @@ extractReadoutColumns <- function(colList, readout, colKey) {
 #'   )
 #' }
 #' @export
-plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts = c('Activity'), logMolarConcVector,
+plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts = c('Activity'), logMolarConcVector = NULL,
                           pointColors=c('darkgreen','blue4'), curveColors=c('darkgreen', 'blue4'),
                           inactiveColor='gray', alpha=1, pointSize=1.0, lineWeight=1.5, plotInactivePoints=T, curveResolution=25,
                           plotAspectRatio=c(1,1,3), antialiasSmoothing = F, returnPlotObject = F,
@@ -93,6 +93,8 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     generic_data <- 1
   }
 
+  print(inputFile)
+  write("in plot function, just starting", stderr())
 
   # aspect ratio... note plotly switches y and z relative to our notion, hence the indices swap on assignment
   aspect <- list()
@@ -119,7 +121,19 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   keyReadouts <- activityReadouts
   alpha_1 <- alpha
 
-  conc = logMolarConcVector
+  if(!is.null(logMolarConcVector)) {
+    conc <- logMolarConcVector
+  } else {
+
+    fileDetails <- extractConcFromFile(inputFile)
+
+    if(is.null(fileDetails) || is.null(fileDetails$logConc)) {
+      return(NULL)
+    }
+
+    conc <- fileDetails$logConc
+    logMolarConcVector <- conc
+  }
   #Color of points in graph ------------------------------------------------------
   pointColors <- c(pointColors, inactiveColor)
   lineColors <- c(curveColors, inactiveColor)
@@ -218,13 +232,17 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     dataCols[i] <- c(paste("Data",(i-1), sep=""))
   }
   all_cdata_points <- cdata[,c(fit, compId, readout, dataCols)]
+  all_cdata_points$compIndex <- 1:nrow(all_cdata_points)
+
   all_cdata_curves <- cdata[,c(fit, compId, readout, lac50, hill, inf, zero)]
+  all_cdata_curves$compIndex <- 1:nrow(all_cdata_curves)
 
   # partition the data by readout
   for(currReadout in activityReadouts) {
     cdata_points[[currReadout]] <- subset(all_cdata_points, all_cdata_points[[readout]] == currReadout)
+
     cdata_curves[[currReadout]] <- subset(all_cdata_curves, all_cdata_curves[[readout]] == currReadout)
-    colnames(cdata_curves[[currReadout]]) <- c("Fit_Output", "COMP_ID", "readout", "LAC50", "HILL", "INF", "ZERO")
+    colnames(cdata_curves[[currReadout]]) <- c("Fit_Output", "COMP_ID", "readout", "LAC50", "HILL", "INF", "ZERO", "compIndex")
   }
 
 
@@ -237,10 +255,11 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   for(currReadout in activityReadouts) {
     curveCount <- readoutCount
     dataPoints <- cdata_points[[currReadout]]
-    for(i in 1:nrow(dataPoints)) {
-      dataPoints$z[i] <- curveCount
-      curveCount <- curveCount + numReadouts
-    }
+    #dataPoints$z <- dataPoints$compIndex
+#    for(i in 1:nrow(dataPoints)) {
+#      dataPoints$z[i] <- curveCount
+#      curveCount <- curveCount + numReadouts
+#    }
     colnames(dataPoints) <- c("Fit_Output","COMP_ID", "readout", concValues[[currReadout]], "z")
     # set the readout columnn
     dataPoints$readout <- currReadout
@@ -364,8 +383,8 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   cdata_curves$HILL[ is.na(cdata_curves$HILL)] <- 1
 
   #recreating titration curves keyword_1------------------------------------------
-  mainMatrix <- data.frame(x=double(),y=double(),z=double())
-  rowIndex = 0;
+#  mainMatrix <- data.frame(x=double(),y=double(),z=double())
+#  rowIndex = 0;
 
   # Need to use the same strategy used for setting z on points, interleaving response curves for different readouts
   numReadouts <- length(activityReadouts)
@@ -383,10 +402,10 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
       if(currCurveSet[i,"Fit_Output"]==1 && readout %in% keyReadouts) {
 
         wfLines <- waterfallLines[[currReadout]]
-
-        d1 <- data.frame(f(currCurveSet[i,], c(minConc[[currReadout]], maxConc[[currReadout]])), z=i)
+        d1 <- data.frame(f(currCurveSet[i,], c(minConc[[currReadout]], maxConc[[currReadout]])), z=currCurveSet[i,"compIndex"])
+        # d1 <- data.frame(f(currCurveSet[i,], c(minConc[[currReadout]], maxConc[[currReadout]])), z=i)
         if(nrow(currCurveSet) > 1) {
-          wfLines <- dplyr::bind_rows(wfLines, data.frame(x=d1[,1], z=curveCount, y=d1[,2]))
+          wfLines <- dplyr::bind_rows(wfLines, data.frame(x=d1[,1], z=d1[,'z'], y=d1[,2]))
           wfLines <- dplyr::bind_rows(wfLines, data.frame(x=NA, z=NA, y=1))
         }
         waterfallLines[[currReadout]] <- wfLines
@@ -743,7 +762,67 @@ evalDataRange <- function(filePath, conc) {
   return(list(lowerLimit, upperLimit))
 }
 
+extractConcFromFile <- function(inputFile) {
 
+  res <- list()
+
+  # parse input file first header
+  formatConcHeader <- scan(inputFile, nlines = 1, what = character())
+
+  formatConcHeader <- unlist(strsplit(formatConcHeader, ","))
+
+  # lower case for some key tags
+  for(i in 1:length(formatConcHeader)) {
+    formatConcHeader[i] <- tolower(trimws(formatConcHeader[i]))
+  }
+
+  # error check block
+  if(!is.null(formatConcHeader) && length(formatConcHeader) > 3) {
+    formatTag <- formatConcHeader[1]
+    res$fileFormat <- formatConcHeader[2]
+
+    if(formatTag != 'format') {
+      res$valid <- FALSE
+      res$problem <- "The file is missing the 'Format:' tag as the first row and first column."
+      return(res)
+    }
+
+
+    if(!('log_conc_m' %in% formatConcHeader)) {
+      res$valid <- FALSE
+      res$problem <-"No 'Log_Conc_M' tag. <br>The first row should have this tag and a series of log molar concentrations."
+      return(res)
+    }
+
+    # made it through... so far....
+
+  } else {
+    res$valid <- FALSE
+    res$problem <- paste0("The first row should contain the 'Format:' tag, a format (generic_qhts or ncats_qhts) <br> and Log Molar concentrations over data columns.<br>
+                       This file only contains ", length(formatConcHeader), " values.")
+    return(res)
+  }
+
+  haveLogConcTag <- FALSE
+  concVector <- c()
+  for(header in formatConcHeader) {
+    if(haveLogConcTag) {
+
+      conc <- as.numeric(header)
+
+      if(!is.na(conc)) {
+        concVector <- c(concVector, conc)
+      }
+    }
+    if(tolower(header) == 'log_conc_m') {
+      haveLogConcTag = TRUE
+    }
+  }
+
+  res$logConc <- concVector
+
+  return(res)
+}
 
 
 #EXPORTING THE IMAGE FILES -----------------------------------------------------
