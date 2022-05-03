@@ -1,0 +1,11 @@
+name: shinyapp
+title:
+username:
+account: braistedifx
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 6215450
+bundleId: 5860575
+url: https://braistedifx.shinyapps.io/shinyapp/
+when: 1651502551.31035
+lastSyncTime: 1651502551.31035
