@@ -8,7 +8,7 @@ plotWaterfall(
   inputFile,
   fileFormat = "generic_qhts",
   activityReadouts = c("Activity"),
-  logMolarConcVector,
+  logMolarConcVector = NULL,
   pointColors = c("darkgreen", "blue4"),
   curveColors = c("darkgreen", "blue4"),
   inactiveColor = "gray",

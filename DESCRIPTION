@@ -17,7 +17,6 @@ Description: Plots 3D qHTS waterfall plot, given Pubchem activity file or NCATS 
 Imports:
     rlang,
     utils,
-    rgl,
     stringr,
     dplyr,
     tidyr,

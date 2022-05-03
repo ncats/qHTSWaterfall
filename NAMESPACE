@@ -2,6 +2,7 @@
 
 export(plotWaterfall)
 export(runQHTSWaterfallApp)
+export(runWaterfall)
 import(dplyr)
 import(plotly)
 import(stringr)
