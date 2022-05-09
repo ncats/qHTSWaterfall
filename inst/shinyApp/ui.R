@@ -156,7 +156,7 @@ shinyUI(
                inputId = 'inputFile',
                label = 'Select Your Input File',
                multiple = FALSE,
-               accept = "*.csv",
+               accept = c("*.csv","*.xlsx"),
                width = NULL,
                buttonLabel = "Browse...",
                placeholder = "No file selected"

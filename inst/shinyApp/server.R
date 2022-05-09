@@ -130,9 +130,9 @@ collectParameters <- function(input, output, status) {
   readouts <- input$readoutCollection
   readouts <- gsub('-readout-checkbox', "", readouts)
 
-  print("collect params ro-collection and then readouts:")
-  print(input$readoutCollection)
-  print(readouts)
+  # print("collect params ro-collection and then readouts:")
+  # print(input$readoutCollection)
+  # print(readouts)
 
   if(newData == TRUE && is.null(input$readoutCollection)) {
     return(NULL)
@@ -245,8 +245,8 @@ plotRefresh <- function(input, output, status, newData){
     props <- NULL
   }
 
-  print("in refresh plot newData????")
-  print(newData)
+  # print("in refresh plot newData????")
+  ## print(newData)
 
   if(!is.null(props)) {
 
@@ -302,7 +302,7 @@ plotRefresh <- function(input, output, status, newData){
 }
 
 sampleDataDialog <- function() {
-  print("sample data dialog function start")
+  # print("sample data dialog function start")
 
   showModal(
     modalDialog(label="Use Sample Data",
@@ -325,13 +325,13 @@ sampleDataDialog <- function() {
 
 plotSampleData <- function(input, output, sampleData) {
 
-  print("plotting sample data")
-  print(sampleData)
+  # print("plotting sample data")
+  # print(sampleData)
 
   if(!is.null(status)) {
     # if the input file represents a file change, remove the UI for readouts, then rebuild
     # removing ui
-    print("Removing old readout UI elements")
+    # print("Removing old readout UI elements")
     removeUI(selector='#readout_params', immediate=T)
     status <<- NULL
     newData <<- TRUE
@@ -364,23 +364,23 @@ plotSampleData <- function(input, output, sampleData) {
 
 downloadSampleData <- function(output, sampleDataFile) {
 
-  print("In download file")
-  print(sampleDataFile)
+  # print("In download file")
+  # print(sampleDataFile)
 
   # downloadHandler(
   #   filename = sampleDataFile,
   #   content = function(file) {
   #     file.copy("generic_qhts_data.txt", file)
-  #     #write.csv(sampleData, file, row.names = FALSE)
+  #     ## write.csv(sampleData, file, row.names = FALSE)
   #   },
   #   contentType = "text/csv"
   # )
 
   downloadHandler(
-    filename = "generic_qhts_data.txt",
+    filename = "generic_qhts_data.xlsx",
     content = function(file) {
-      file.copy(sampleData, "generic_qhts_data.txt")
-      #write.csv(sampleData, file, row.names = FALSE)
+      #file.copy(sampleData, "generic_qhts_data.xlsx")
+      write.xlsx(sampleData, file, row.names = FALSE)
     }
     ,
     contentType = "text/csv"
@@ -429,6 +429,7 @@ server <- function(input, output, session) {
   newData <<- TRUE
 
   sampleData <<- system.file("extdata", "Generic_qHTS_Format_Example.csv", package="qHTSWaterfall")
+  downloadSampleData <<- system.file("extdata", "Generic_qHTS_Format_Example.xlsx", package="qHTSWaterfall")
 
   wfPoints <- reactiveVal(0)
   wfLines <- reactiveVal(0)
@@ -436,30 +437,38 @@ server <- function(input, output, session) {
   # Input file selected, initialize status and build initial plot.................
   observeEvent(input$inputFile, {
 
-    print("in input file trigger event")
+    # print("in input file trigger event")
 
     usingSampleData <<- FALSE
 
     if(!is.null(status)) {
       # if the input file represents a file change, remove the UI for readouts, then rebuild
       # removing ui
-      print("Removing old readout UI elements")
+      # print("Removing old readout UI elements")
       removeUI(selector='#readout_params', immediate=T)
       status <<- NULL
       newData <<- TRUE
-    } else {
-      print("Hey is status really NULL??????")
     }
+
+    # print("starting input eval")
 
     status <<- qHTSWaterfall:::evaluateInputFile(input$inputFile$datapath)
 
+    # print("passed input eval")
+
     if(!status$valid) {
+      # print("invalid input dialog...")
       showModal(modalDialog(h4(status$problem),title="File Format Problem"))
       return(NULL)
     }
 
+    # print("# print Status:")
+    # print(status)
+
     if(length(status$readouts) > 0) {
       enable(id='plotRefreshBtn')
+
+      # print("readouts are > 0")
 
       # coming soon...
       #enable(id='plotExportBtn')
@@ -491,7 +500,7 @@ server <- function(input, output, session) {
 
                  plotSampleData(input, output, sampleData)
 
-                 print("hit sample data button")
+                 # print("hit sample data button")
                  #sampleDataDialog()
                }
                ,ignoreNULL = TRUE
@@ -504,11 +513,11 @@ server <- function(input, output, session) {
 
   output$sampleDataDownload <- downloadHandler(
      filename = function() {
-       "qHTS_Generic_Data_Sample.csv"
+       "qHTS_Generic_Data_Sample.xlsx"
      },
      content = function(con) {
-       print("Hey im in download handler... I'm about to copy file...")
-       file.copy(sampleData, con)
+       # print("Hey im in download handler... I'm about to copy file...")
+       file.copy(downloadSampleData, con)
      }
   )
 
