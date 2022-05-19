@@ -4,6 +4,8 @@ library(shinyjs)
 # builds ui elements based on input file
 addReadoutSelector <- function(status) {
 
+
+
   readouts <- status$readouts
 
   defaultColors <<- c('darkgreen', 'blue4', 'red4', 'gold3', 'darkseagreen4', 'lightsalmon4', 'darkorchid3',
