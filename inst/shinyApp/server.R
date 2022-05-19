@@ -7,7 +7,7 @@ addReadoutSelector <- function(status) {
   readouts <- status$readouts
 
   defaultColors <<- c('darkgreen', 'blue4', 'red4', 'gold3', 'darkseagreen4', 'lightsalmon4', 'darkorchid3',
-                      'aquamarine4', 'darkorange3', 'sienna4', 'seagreen3', 'lemonchiffon4', 'lightskblue2',
+                      'aquamarine4', 'darkorange3', 'sienna4', 'seagreen3', 'lemonchiffon4', 'lightskyblue2',
                       'palegreen3', 'palevioletred3', 'peru', 'deeppink3', 'orangered3', 'purple4', 'gray20',
                       'plum3', 'wheat4', 'steelblue4', 'lightgoldenrod')
 

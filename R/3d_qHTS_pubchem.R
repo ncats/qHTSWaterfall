@@ -13,10 +13,8 @@ interleave <- function(x) {
 }
 
 f <- function(params, concs, interleave=TRUE, curveRes) {
-  # print("starting f")
   xx <- seq(min(concs), max(concs), length=curveRes)
   yy <- with(params, ZERO + (INF-ZERO)/(1 + 10^((LAC50-xx)*HILL)))
-  # print("ending f")
   return(data.frame(x=xx, y=yy))
 }
 
@@ -106,21 +104,10 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     generic_data <- 1
   }
 
-  # # print(inputFile)
-  ## write("in plot function, just starting", stderr())
-
 
   fileExt <- tools::file_ext(inputFile)
 
   print("starting plotWaterfall method..")
-  # print("file ext =")
-  # print(fileExt)
-
-  # # print(activityReadouts)
-  # # print(curveColors)
-  # # print(logMolarConcVector)
-  # # print(pointColors)
-  # # print(plotAspectRatio)
 
   # aspect ratio... note plotly switches y and z relative to our notion, hence the indices swap on assignment
   aspect <- list()
@@ -164,20 +151,17 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   pointColors <- c(pointColors, inactiveColor)
   lineColors <- c(curveColors, inactiveColor)
 
-  # print("in plot method, about to read data")
   # read data file (header line 2 and body) ----------------------------
   if(tolower(fileExt)  == 'csv') {
-    cdata <- read.csv(inputFile, header=TRUE, skip=1, na.string="null")
+    cdata <- read.csv(inputFile, header=TRUE, skip=1, na.strings=c("NA","","NAN","NaN","N/A"))
   } else {
     cdata <- openxlsx::read.xlsx(inputFile, sheet=1, startRow=2)
   }
+
+  # removed completely empty rows
+  cdata <- cdata[rowSums(is.na(cdata)) != ncol(cdata),]
+
   heads <- colnames(cdata)
-
-  # print("in plot method, finished read data, headers")
-  # print(heads)
-
-  # print("cdata dim")
-  # print(dim(cdata))
 
   #Identifying data headers to load ----------------------------------------------
   if(generic_data == 1) {
@@ -277,6 +261,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
 
   # partition the data by readout
   for(currReadout in activityReadouts) {
+
     cdata_points[[currReadout]] <- subset(all_cdata_points, all_cdata_points[[readout]] == currReadout)
 
     cdata_curves[[currReadout]] <- subset(all_cdata_curves, all_cdata_curves[[readout]] == currReadout)
@@ -324,10 +309,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     readoutCount <- readoutCount + 1
   }
 
-  # write("about to pivot matrix... usin tidyr pivot_longer", stderr())
-
   mainMatrix <- tidyr::pivot_longer(fullMatrix, cols = 4:(ncol(fullMatrix)-1), names_to = "x", values_to = "y")
-
   #mainMatrix <- tidyr::pivot_longer(cdata_points, cols = 2:(l-1), names_to = c("x","z"), names_pattern = "(.)(.)", values_to = "y")
 
   myMain <- mainMatrix
@@ -359,8 +341,6 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   for(currReadout in keyReadouts) {
     waterfallLines[[currReadout]] = data.frame(x=double(), y=double(), z=double())
   }
-
-  # write("getting/building point data now, starting...", stderr())
 
   ##########
   ##
@@ -420,23 +400,6 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   cdata_curves$LAC50[is.na(cdata_curves$LAC50)] <- log10(10)
   cdata_curves$HILL[ is.na(cdata_curves$HILL)] <- 1
 
-  #
-
-
-
-  #recreating titration curves keyword_1------------------------------------------
-#  mainMatrix <- data.frame(x=double(),y=double(),z=double())
-#  rowIndex = 0;
-
-  # write("have points, creating curves", stderr())
-  #for(r in keyReadouts) {
-  #  # write(paste0("key readout = ",r), stderr())
-  #}
-
-  #for(r in activityReadouts) {
-  #  # write(paste0("activity readout = ",r), stderr())
-  #}
-
 
   # Need to use the same strategy used for setting z on points, interleaving response curves for different readouts
   numReadouts <- length(activityReadouts)
@@ -446,80 +409,28 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   for(currReadout in activityReadouts) {
     currCurveSet <- cdata_curves[[currReadout]]
 
-    # print("In readout loop for curves, current curvset dim:")
-    # print(currReadout)
-    # print(keyReadouts)
-    # print(currReadout %in% keyReadouts)
-    # print(dim(currCurveSet))
-    # print("curve set col names")
-    # print(colnames(currCurveSet))
-
-
-
     curveCount = readoutCount
     l <- nrow(currCurveSet)
 
     for (i in 1:l) {
 
-      #currReadout = currCurveSet[i,"readout"]
-
-      # write(paste0("processing for curves, index= ", i, " currReadout = ", currReadout, " readout = ", readout), stderr())
-
       if((currCurveSet[i,"Fit_Output"]==1) && (currReadout %in% keyReadouts)) {
 
-        # print("inside the if statement...")
-        # # write("checkpoint 1", stderr())
-        # for(n in names(waterfallLines)) {
-        #   # # write(paste0("name in waterfall lines = **",n,"**"),stderr())
-        #   # # write(paste0("currReadout = **",currReadout, "**"), stderr())
-        #   # # write(paste0("n == currReadout: ",(n == currReadout)), stderr())
-        #   # # write(paste0("identical(n,currReadout): ",(identical(n, currReadout))), stderr())
-        #   # # write(paste0("identical(n, currReadout, num.eq=F): ",(identical(n, currReadout, num.eq=F))), stderr())
-        #   # # write(paste0("identical(n, currReadout, num.eq=F, ignore.bytecode = F): ",(identical(n, currReadout, num.eq=F, ignore.bytecode = F))), stderr())
-        #   # # write(paste0("identical(n, currReadout, num.eq=F, ignore.bytecode = F, ignore.environment = F): ",(identical(n, currReadout, num.eq=F, ignore.bytecode = F, ignore.environment = F))), stderr())
-        #   # ## write(paste0("Encoding(n), Encoding(currReadout)", Encoding(n), ", ", Encoding(currReadout)), stderr())
-        #
-        #   junk <- waterfallLines[[n]]
-        #   # write("checkpoint 1a", stderr())
-        #   #currReadout <- n
-        #   junk2 <- waterfallLines[[currReadout]]
-        #   # write("checkpoint 1b", stderr())
-        # }
-
         wfLines <- waterfallLines[[currReadout]]
-        # write("checkpoint 2", stderr())
-        # print(typeof(currCurveSet))
-        # print("vals")
-        # print(currCurveSet[i,])
 
         d1 <- data.frame(f(currCurveSet[i,], c(minConc[[currReadout]], maxConc[[currReadout]]), interleave = T, curveRes = curveResolution), z=currCurveSet[i,"compIndex"])
-        # write("checkpoint 3", stderr())
 
-        # d1 <- data.frame(f(currCurveSet[i,], c(minConc[[currReadout]], maxConc[[currReadout]])), z=i)
         if(nrow(currCurveSet) > 1) {
-          # print("In block currCurveSet > 1")
-          # # write("checkpoint 4", stderr())
           wfLines <- dplyr::bind_rows(wfLines, data.frame(x=d1[,1], z=d1[,'z'], y=d1[,2]))
-          # # write("checkpoint 5", stderr())
           wfLines <- dplyr::bind_rows(wfLines, data.frame(x=NA, z=NA, y=1))
-          # # write("checkpoint 6", stderr())
-          # print("Exiting block currCurveSet > 1")
-
         }
-        # write("checkpoint 7", stderr())
+
         waterfallLines[[currReadout]] <- wfLines
-        # write("checkpoint 8", stderr())
         curveCount <- curveCount + numReadouts
       }
-      # write("checkpoint 9", stderr())
     }
-    # write("checkpoint finished df for currReadout", stderr())
-
     readoutCount <- readoutCount + 1
   }
-
-  # write("in plot function, we've created the lines and points data", stderr())
-  # write("about to reformat for plotly...", stderr())
 
   # verify numeric data
   for(i in 1:length(waterfallPoints)) {
@@ -810,10 +721,12 @@ evaluateInputFile <- function(filePath) {
   # skip the first header and read table
 
   if(tolower(fileExt)  == 'csv') {
-    cdata <- read.csv(filePath, skip=1, header=T, na.string="null")
+    cdata <- read.csv(filePath, header=TRUE, skip=1, na.strings=c("NA","","NAN","NaN","N/A"))
   } else {
     cdata <- openxlsx::read.xlsx(filePath, sheet=1, startRow=2)
   }
+
+  cdata <- cdata[rowSums(is.na(cdata)) != ncol(cdata),]
 
   heads <- colnames(cdata)
 
@@ -837,7 +750,7 @@ evaluateInputFile <- function(filePath) {
 
     # set default colors
     defaultColors <<- c('darkgreen', 'blue4', 'red4', 'gold3', 'darkseagreen4', 'lightsalmon4', 'darkorchid3',
-                        'aquamarine4', 'darkorange3', 'sienna4', 'seagreen3', 'lemonchiffon4', 'lightskblue2',
+                        'aquamarine4', 'darkorange3', 'sienna4', 'seagreen3', 'lemonchiffon4', 'lightskyblue2',
                         'palegreen3', 'palevioletred3', 'peru', 'deeppink3', 'orangered3', 'purple4', 'gray20',
                         'plum3', 'wheat4', 'steelblue4', 'lightgoldenrod')
 
@@ -852,10 +765,12 @@ evalDataRange <- function(filePath, conc) {
   fileExt <- tools::file_ext(filePath)
 
   if(tolower(fileExt)  == 'csv') {
-    cdata <- read.csv(filePath, header=TRUE, skip=1, na.string="null")
+    cdata <- read.csv(filePath, header=TRUE, skip=1, na.strings=c("NA","","NAN","NaN","N/A"))
   } else {
     cdata <- openxlsx::read.xlsx(filePath, sheet=1, startRow=2)
   }
+
+  cdata <- cdata[rowSums(is.na(cdata)) != ncol(cdata),]
 
   dataCols <- c()
 
@@ -893,10 +808,10 @@ extractConcFromFile <- function(inputFile) {
   fileExt <- tools::file_ext(inputFile)
 
   if(tolower(fileExt) == 'csv') {
-    formatConcHeader <- scan(filePath, nlines = 1, what = character())
+    formatConcHeader <- scan(inputFile, nlines = 1, what = character())
     formatConcHeader <- unlist(strsplit(formatConcHeader, ","))
   } else {
-    formatConcHeader <- openxlsx::read.xlsx(filePath, sheet=1, colNames=F, rows = as.numeric(c(1)))
+    formatConcHeader <- openxlsx::read.xlsx(inputFile, sheet=1, colNames=F, rows = as.numeric(c(1)))
     formatConcHeader <- as.character(formatConcHeader[1,])
   }
 
