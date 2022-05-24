@@ -21,7 +21,7 @@ library(qhtsWaterfall)
 # Use this method to start the user interface Shiny Application
 qHTSWaterfall::runQHTSWaterfallApp()
 
-# For commandline use please see vignette example code at the link below...
+# Please see the vignette example code at the link below to see example R command-prompt or RStudio use. 
 
 ```
 ## Vignette Example
