@@ -1,5 +1,5 @@
-library(shiny)
-library(shinyjs)
+# library(shiny)
+# library(shinyjs)
 
 # builds ui elements based on input file
 addReadoutSelector <- function(status) {
@@ -15,29 +15,38 @@ addReadoutSelector <- function(status) {
 
   readoutBoxIds <- c()
   for(readout in readouts) {
-    readoutBoxIds <- c(readoutBoxIds, paste0(readout,'-readout-checkbox'))
+    idReadout <- gsub(" ", "-", readout)
+    readoutBoxIds <- c(readoutBoxIds, paste0(idReadout,'-readout-checkbox'))
   }
 
   colorNum = 1
-  colorVal = 'white'
+  colorVal = 'darkgreen'
   for(readout in readouts) {
     if(colorNum <= length(defaultColors)) {
       colorVal <- defaultColors[colorNum]
     }
 
+    # write("color in gui init", stderr())
+    # write(colorVal, stderr())
+    # write(colorNum, stderr())
+    # write(length(defaultColors), stderr())
+
     colorNum = colorNum + 1
 
-    cDiv <- div(id=paste0(readout,"-readout-color-div"),
+
+    idReadout <- gsub(" ", "-", readout)
+
+    cDiv <- div(id=paste0(idReadout,"-readout-color-div"),
                 readoutColor <- colourpicker::colourInput(
-                  inputId = paste0(readout,'-line-color'), label = paste0(readout," line color:"),
+                  inputId = paste0(idReadout,'-line-color'), label = paste0(readout," line color:"),
                   value = colorVal
                 ),
                 readoutColor <- colourpicker::colourInput(
-                  inputId = paste0(readout,'-point-color'), label = paste0(readout," point color:"),
+                  inputId = paste0(idReadout,'-point-color'), label = paste0(readout," point color:"),
                   value = colorVal
                 )
     )
-    colorChoosers[[paste0(readout,"-readout-color-div")]] <- cDiv
+    colorChoosers[[paste0(idReadout,"-readout-color-div")]] <- cDiv
   }
 
   plotInactivePoints <- div(id="plot-inactives-div",
@@ -59,7 +68,7 @@ addReadoutSelector <- function(status) {
                   h4("Axis Range Parameters"),
                   div(id = 'response_custom',
                       checkboxInput(inputId = 'customize_response_range', label="Customize Response Axis"),
-                      hidden(rangeConfig <- div(id = 'response_range_config',
+                      shinyjs::hidden(rangeConfig <- div(id = 'response_range_config',
                                                 h3('Response Range Customization'),
                                                 textInput(inputId = 'response_axis_title', label = "Response Axis Title", value="Response"),
                                                 splitLayout(cellWidths = c("50%", "50%"),
@@ -74,7 +83,7 @@ addReadoutSelector <- function(status) {
                   ),
                   div(id = 'conc_custom',
                       checkboxInput(inputId = 'customize_conc_range', label="Customize Concentration Axis"),
-                      hidden(rangeConfig <- div(id = 'conc_range_config',
+                      shinyjs::hidden(rangeConfig <- div(id = 'conc_range_config',
                                                 h3('Concentration Range Customization'),
                                                 textInput(inputId = 'conc_axis_title', label = "Concentration Axis Title", value="log10[conc], M"),
                                                 splitLayout(cellWidths = c("50%", "50%"),
@@ -97,10 +106,10 @@ addReadoutSelector <- function(status) {
       inputId = 'readoutCollection',
       label = 'Select Readouts to Plot',
       #choices = readouts,
-      selected = readoutBoxIds,
+      selected = readouts,
       width = '400px',
       choiceNames = readouts,
-      choiceValues = readoutBoxIds,
+      choiceValues = readouts,
       inline = F
     ),
     colorDiv,
@@ -128,11 +137,19 @@ collectParameters <- function(input, output, status) {
   # }
 
   readouts <- input$readoutCollection
+  readabouts <- input$readoutCollection
+  print("readabouts")
+  print(readabouts)
+  print(readouts)
+  print(str(readouts))
+  print(str(input))
   readouts <- gsub('-readout-checkbox', "", readouts)
 
   # print("collect params ro-collection and then readouts:")
   # print(input$readoutCollection)
   # print(readouts)
+
+  idReadouts <- gsub(" ", "-", readouts)
 
   if(newData == TRUE && is.null(input$readoutCollection)) {
     return(NULL)
@@ -147,7 +164,7 @@ collectParameters <- function(input, output, status) {
   } else {
     pointColors <- c()
     lineColors <- c()
-    for(readout in readouts) {
+    for(readout in idReadouts) {
       lineColorTag = paste0(readout, "-line-color")
       pointColorTag = paste0(readout,"-point-color")
       lineColors <- c(lineColors, input[[lineColorTag]])
@@ -198,7 +215,7 @@ collectParameters <- function(input, output, status) {
     axisTitles <- list()
     axisTitles[['concTitle']] <- input$conc_axis_title
     axisTitles[['respTitle']] <- input$response_axis_title
-    axisTitles[['curveTitle']] <- ""
+    axisTitles[['curveTitle']] <- "Compound"
 
     props <- list(inputFile = inputFile,
                   fileFormat = status$fileFormat,
@@ -213,7 +230,6 @@ collectParameters <- function(input, output, status) {
                   plotInactivePoints = plotInactives,
                   curveResolution = lineRes,
                   plotAspectRatio = aspectRatio,
-                  returnPlotObject = T,
                   axisTitles = axisTitles,
                   planeColors = planeColors,
                   gridColor = gridColor,
@@ -267,7 +283,6 @@ plotRefresh <- function(input, output, status, newData){
                                       plotInactivePoints = props$plotInactivePoints,
                                       curveResolution = props$curveResolution,
                                       plotAspectRatio = props$plotAspectRatio,
-                                      returnPlotObject = T,
                                       axisTitles = props$axisTitles,
                                       planeColors = props$planeColors,
                                       gridColor = props$gridColor,
@@ -290,8 +305,7 @@ plotRefresh <- function(input, output, status, newData){
                                       activityReadouts = status$readouts,
                                       logMolarConcVector = status$logConc,
                                       pointColors = status$defaultColors,
-                                      curveColors = status$defaultColors,
-                                      returnPlotObject = T
+                                      curveColors = status$defaultColors
     )
   }
 
@@ -350,7 +364,7 @@ plotSampleData <- function(input, output, sampleData) {
   }
 
   if(length(status$readouts) > 0) {
-    enable(id='plotRefreshBtn')
+    shinyjs::enable(id='plotRefreshBtn')
 
     # coming soon...
     #enable(id='plotExportBtn')
@@ -421,8 +435,8 @@ server <- function(input, output, session) {
 
   options(shiny.maxRequestSize=30*1024^2)
 
-  disable(id='plotRefreshBtn')
-  disable(id='plotExportBtn')
+  shinyjs::disable(id='plotRefreshBtn')
+  shinyjs::disable(id='plotExportBtn')
 
   status <<- NULL
   usingSampleData <<- FALSE
@@ -466,7 +480,7 @@ server <- function(input, output, session) {
     # print(status)
 
     if(length(status$readouts) > 0) {
-      enable(id='plotRefreshBtn')
+      shinyjs::enable(id='plotRefreshBtn')
 
       # print("readouts are > 0")
 
@@ -619,7 +633,6 @@ server <- function(input, output, session) {
                                         plotInactivePoints = props$plotInactivePoints,
                                         curveResolution = props$curveResolution,
                                         plotAspectRatio = props$plotAspectRatio,
-                                        returnPlotObject = T,
                                         axisTitles = props$axisTitles,
                                         planeColors = props$planeColors,
                                         gridColor = props$gridColor,

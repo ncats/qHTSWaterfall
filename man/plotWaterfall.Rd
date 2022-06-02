@@ -19,7 +19,6 @@ plotWaterfall(
   curveResolution = 25,
   plotAspectRatio = c(1, 1, 3),
   antialiasSmoothing = F,
-  returnPlotObject = F,
   axisTitles = list(concTitle = "log2[Conc], M", respTitle = "Response", curveTitle =
     ""),
   planeColors = list(basePlaneColor = "#b8b6b6", rightPlaneColor = "#999494",
@@ -62,9 +61,6 @@ Fewer points renders as connected straight lines.}
 Input as list, derault: c(1, 1, 3)}
 
 \item{antialiasSmoothing}{smooths plot line rendering. Default is FALSE. Setting as TRUE will smooth lines, but may slow response during re-drawing plot.}
-
-\item{returnPlotObject}{if True, it returns an rgl 'scene' object that can be plotted using 'rgl::plot3d()'.
-If FALSE, the default value, this function opens and rgl plot window for plotting.}
 
 \item{axisTitles}{a list holding response, concentration and curve number axis titles (default, list(concTitle="log2Conc, M", respTitle="Response", curveTitle=""))}
 

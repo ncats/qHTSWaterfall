@@ -28,7 +28,8 @@ Imports:
     shinycssloaders,
     pkgload,
     openxlsx,
-    tools
+    tools,
+    stats
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

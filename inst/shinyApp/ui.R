@@ -1,6 +1,5 @@
-library(shiny)
-library(shinyjs)
-
+# library(shiny)
+# library(shinyjs)
 
 addPlotCustomizationUI <- function() {
 
@@ -56,8 +55,8 @@ sampleData <<- system.file("extdata", "Generic_qHTS_Format_Example.csv", package
 
 shinyUI(
   fluidPage(
-  useShinyjs(),
-  inlineCSS("
+  shinyjs::useShinyjs(),
+  shinyjs::inlineCSS("
       #sidebarPanel {
       }
       #mainPanel {

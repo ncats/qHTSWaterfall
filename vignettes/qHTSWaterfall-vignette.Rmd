@@ -9,8 +9,6 @@ vignette: >
 
 ```{r setup, include=FALSE, cache=FALSE}
 library(knitr)
-library(rgl)
-rgl::setupKnitr(autoprint = T)
 knitr::opts_chunk$set(
 collapse = TRUE,
 echo = TRUE,
@@ -52,10 +50,11 @@ logConc <- c(
 
 # the main method call with parameters. Use 'help(plotWaterfall' for parameter descriptions.)
 # Note: The displayed resulting plot shown in this vignette page is a low resolution static image.
-# The method will return a high resolution 3D rendering (from the rgl package) that can be resized
+# The method will return a high resolution 3D rendering that can be resized
 # and rotated.
 qHTSWaterfall::plotWaterfall(
   inputFile,
+  fileFormat = "ncats_qhts",
   activityReadouts = c("fluc", "nluc"),
   logMolarConcVector = logConc,
   pointColors = c("darkgreen", "royalblue3"),
@@ -65,7 +64,6 @@ qHTSWaterfall::plotWaterfall(
   alpha = 1,
   plotInactivePoints = F,
   curveResolution = 250,
-  plotAspectRatio = c(2,2,4),
-  returnPlotObject = F
+  plotAspectRatio = c(2,2,4)
 )
 ```

@@ -10,7 +10,6 @@
 #' @export
 runQHTSWaterfallApp <- function() {
   appDir <- system.file("shinyApp",package = "qHTSWaterfall")
-  print(appDir)
   shiny::runApp(appDir, display.mode = "normal", test.mode = F, quiet = T, host="127.0.0.1")
 }
 
@@ -19,15 +18,8 @@ runQHTSWaterfallApp <- function() {
 #'
 #' @export
 runWaterfall <- function() {
-  print("in run waterfall")
-  print(getwd())
   appDir <- system.file("shinyApp", package = 'qHTSWaterfall')
-  print(appDir)
-
-  print("Hey set app dir... starting runApp")
-  #setwd("./inst/shinyApp/")
   shiny::runApp(appDir, display.mode = "normal")
-  print("OK, App running")
 }
 
 
