@@ -2,12 +2,12 @@
 % Please edit documentation in R/runWaterfallApp.R
 \name{runQHTSWaterfallApp}
 \alias{runQHTSWaterfallApp}
-\title{Runs the qHTSWaterfall Shiny Application User Interface}
+\title{Runs the qHTSWaterfall Shiny Application User Interface locally}
 \usage{
 runQHTSWaterfallApp()
 }
 \description{
-Runs the qHTSWaterfall Shiny Application User Interface
+Runs the qHTSWaterfall Shiny Application User Interface locally
 }
 \examples{
 \dontrun{

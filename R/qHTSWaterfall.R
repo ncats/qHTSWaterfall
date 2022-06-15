@@ -1,4 +1,11 @@
-# THE PURPOSE OF THIS PROGRAM IS TO TAKE A .CSV FILE AND CREATE A 3D WATERFALL PLOT
+##################################################
+## Project: qHTSWaterfall
+## Script purpose: Plotting engine for qHTSWaterfall App
+## Date: 5/15/2022
+## Authors: Bryan Queme, John Braisted
+## Institute: National Center for Advancing Translational Sciences, NCATS
+## National Institutes of Health
+##################################################
 
 
 extractReadoutColumns <- function(colList, readout, colKey) {
@@ -43,6 +50,7 @@ f <- function(params, concs, interleave=TRUE, curveRes) {
 #' @param showCurveNumberLabels boolean, indicates if the curve index numbers should be shown on the axis, or hidden.
 #' @param concAxisConfig a list with 4 named values: min, max, tickWidth, firstTick.
 #' @param responseAxisConfig a list with 4 named values: min, max, tickWidth, firstTick.
+#' @param axisFontSize an integer specifying the font size for axis titles and tick labels. Default = 13, best size range tends to be from 11 to 15.
 #' @importFrom utils read.csv
 #' @import plotly
 #' @import stringr
@@ -94,18 +102,13 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
                           plotAspectRatio=c(1,1,3), antialiasSmoothing = F,
                           axisTitles = list(concTitle="log2[conc], M", respTitle="Response", curveTitle="Compound"),
                           planeColors = list(basePlaneColor="#b8b6b6", rightPlaneColor="#999494", leftPlaneColor="#6e6868"),
-                          gridColor = "#ffffff", showCurveNumberLabels = TRUE, concAxisConfig = NULL, responseAxisConfig = NULL) {
+                          gridColor = "#ffffff", showCurveNumberLabels = TRUE, concAxisConfig = NULL, responseAxisConfig = NULL, axisFontSize=13) {
 
   if(fileFormat == 'ncats_qhts') {
     generic_data <- 0
   } else {
     generic_data <- 1
   }
-
-  write(logMolarConcVector, stderr())
-  write(activityReadouts, stderr())
-  write(pointColors, stderr())
-  write(curveColors, stderr())
 
   fileExt <- tools::file_ext(inputFile)
 
@@ -538,6 +541,11 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     pointPal <- setNames(pointPal, activityReadouts)
   }
 
+  f = list(
+    family = 'Arial',
+    size = axisFontSize,
+    color='black')
+
   # right verical plane
   # default #999494
   axx <- list(
@@ -549,12 +557,17 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     showspikes=F,
     hovertext='skip',
     ticks='outside'
+    #tickfont=f
   )
 
   # left vertical plane
   # #6e6868
+  curveAxisTitle = axisTitles[['curveTitle']]
+  if(!showCurveNumberLabels) {
+    curveAxisTitle = ""
+  }
   axy <- list(
-    title = axisTitles[['curveTitle']],
+    title = curveAxisTitle,
     autorange='reversed',
     backgroundcolor=planeColors[['leftPlaneColor']],
     gridcolor=gridColor,
@@ -562,6 +575,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     showbackground = T,
     showspikes=F,
     showticklabels = showCurveNumberLabels
+    #tickfont=f
   )
 
   # base plane
@@ -574,7 +588,10 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     showbackground = T,
     showspikes=F,
     ticks='outside'
+    #tickfont=f
   )
+
+
 
   if(!is.null(responseAxisConfig)) {
     axz[['autotick']] <- F
@@ -611,7 +628,15 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
 
   p <- plotly::plot_ly(wfl, x=~x, y=~z, z=~y, color=~readout, colors=linePal) %>% group_by(readout)
 
-  p <- p %>% plotly::layout(scene = list(aspectratio = aspect, xaxis=axx, yaxis=axy, zaxis=axz, camera = list(eye = list(x = 2.25, y = 2.25, z = 0.3))))
+  # if(nrow(wfp) > 100000) {
+  #   p <- toWebGL(p)
+  # }
+
+
+
+  m <- list(l=40, r=200, b=10, t=10)
+
+#  p <- p %>% plotly::layout(scene = list(aspectratio = aspect, xaxis=axx, yaxis=axy, zaxis=axz, camera = list(eye = list(x = 2.25, y = 2.25, z = 0.3))), font = f)
 
   p <- p %>% plotly::add_lines(line=list(width=lineWeight)) %>% style(hoverinfo='none')
 
@@ -619,6 +644,10 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     p <- p %>% plotly::add_trace(x=~wfp$x, y=~wfp$z, z=~wfp$y, color=~wfp$readout, colors=pointPal,
                                  type='scatter3d', mode='markers', marker = list(size=pointSize), inherit=F)
   }
+
+
+  p <- p %>% plotly::layout(scene = list(aspectratio = aspect, xaxis=axx, yaxis=axy, zaxis=axz, camera = list(eye = list(x = 2.25, y = 2.25, z = 0.3)), margin=list(autoexpand = T), hovermode=FALSE), font=f)
+
 
   return(p)
 }
@@ -628,7 +657,7 @@ evaluateInputFile <- function(filePath) {
 
   fileExt <- tools::file_ext(filePath)
 
-  fileFormats <- c("generic", "ncats_qhts")
+  fileFormats <- c("generic_qhts", "ncats_qhts")
 
   status <- list()
   status$valid <- TRUE
@@ -636,11 +665,13 @@ evaluateInputFile <- function(filePath) {
   status$inputFile <- filePath
 
   if(tolower(fileExt) == 'csv') {
-    formatConcHeader <- scan(filePath, nlines = 1, what = character())
-    formatConcHeader <- unlist(strsplit(formatConcHeader, ","))
+    head <- read.csv(filePath, sep=",", nrow=2, header = F, stringsAsFactors = FALSE)
+    formatConcHeader <- unlist(head[1,])
+    primaryHeader <- unlist(head[2,])
   } else {
-    formatConcHeader <- openxlsx::read.xlsx(filePath, sheet=1, colNames=F, rows = as.numeric(c(1)))
-    formatConcHeader <- as.character(formatConcHeader[1,])
+    header <- openxlsx::read.xlsx(filePath, sheet=1, colNames=F, rows = as.numeric(c(1,2)))
+    formatConcHeader <- as.character(header[1,])
+    primaryHeader <- as.character(header[2,])
   }
 
   for(i in 1:length(formatConcHeader)) {
@@ -655,18 +686,39 @@ evaluateInputFile <- function(filePath) {
 
     if(formatTag != 'format') {
       status$valid <- FALSE
-      status$problem <- "The file is missing the 'Format:' tag as the first row and first column."
+      status$problem <- "File Format Problem: The file is missing the 'Format:' tag as the first row and first column."
       return(status)
     }
 
 
     if(!('log_conc_m' %in% formatConcHeader)) {
       status$valid <- FALSE
-      status$problem <-"No 'Log_Conc_M' tag. <br>The first row should have this tag and a series of log molar concentrations."
+      status$problem <-"File Format Problem: No 'Log_Conc_M' tag. The first row should have this tag and a series of log molar concentrations."
       return(status)
     }
 
     # made it through... so far....
+
+    if(!(status$fileFormat %in% fileFormats)) {
+      status$valid <- FALSE
+      status$problem <- paste0("File Format Problem: The first row should contain the 'Format:' tag, and the next column should
+      specify the format either 'generic_qhts' or 'ncats_qhts'.")
+      return(status)
+    }
+
+    # now we need to determine if we have the required primary header fields for the format
+    validHeader <- validatePrimaryHeader(status$fileFormat, primaryHeader)
+    if(typeof(validHeader) != 'logical') {
+      status$valid <- FALSE
+      s <- ""
+      if(length(validHeader) > 1) {
+        s <- "s"
+      }
+      missingFields <- paste(validHeader, collapse=", ")
+      status$problem <- paste0("File Format Problem: The specified file format is ", status$fileFormat, ", but the primary header (second row) is missing the following field", s, ": ", missingFields)
+      return(status)
+    }
+
 
   } else {
     status$valid <- FALSE
@@ -751,10 +803,6 @@ evaluateInputFile <- function(filePath) {
       return(status)
     }
 
-#     write("Readouts", stderr())
-#     write(readouts, stderr())
-#     write("End Readouts", stderr())
-
     # set default colors
     defaultColors <<- c('darkgreen', 'blue4', 'red4', 'gold3', 'darkseagreen4', 'lightsalmon4', 'darkorchid3',
                         'aquamarine4', 'darkorange3', 'sienna4', 'seagreen3', 'lemonchiffon4', 'lightskyblue2',
@@ -763,8 +811,6 @@ evaluateInputFile <- function(filePath) {
 
 
     status$defaultColors <- defaultColors[1:length(readouts)]
-
-    print(status$defaultColors, stderr())
 
   return(status)
 }
@@ -817,8 +863,8 @@ extractConcFromFile <- function(inputFile) {
   fileExt <- tools::file_ext(inputFile)
 
   if(tolower(fileExt) == 'csv') {
-    formatConcHeader <- scan(inputFile, nlines = 1, what = character())
-    formatConcHeader <- unlist(strsplit(formatConcHeader, ","))
+    header <- read.csv(inputFile, sep=",", nrow=2, header = F, stringsAsFactors = FALSE)
+    formatConcHeader <- unlist(header[1,])
   } else {
     formatConcHeader <- openxlsx::read.xlsx(inputFile, sheet=1, colNames=F, rows = as.numeric(c(1)))
     formatConcHeader <- as.character(formatConcHeader[1,])
@@ -875,6 +921,44 @@ extractConcFromFile <- function(inputFile) {
   res$logConc <- concVector
 
   return(res)
+}
+
+validatePrimaryHeader <- function(fileFormat, primaryHeader) {
+  if(fileFormat == 'generic_qhts') {
+
+    fieldList <- list(
+      "Fit_Output",
+      "Comp_ID",
+      "Readout",
+      "Log_AC50_M",
+      "Hill_Slope",
+      "S_Inf",
+      "S_0"
+    )
+  } else {
+    fieldList <- list(
+      "Fit_Output",
+      "Sample ID",
+      "Sample Data Type",
+      "Log AC50 (M)",
+      "Hill Coef",
+      "Inf Activity",
+      "Zero Activity"
+    )
+  }
+
+  missingFields <- c()
+  for(field in fieldList) {
+    if(!(field %in% primaryHeader)) {
+      missingFields <- c(missingFields, field)
+    }
+  }
+
+  if(length(missingFields) == 0) {
+    return(TRUE)
+  } else {
+    return(missingFields)
+  }
 }
 
 

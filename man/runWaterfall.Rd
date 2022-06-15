@@ -2,10 +2,10 @@
 % Please edit documentation in R/runWaterfallApp.R
 \name{runWaterfall}
 \alias{runWaterfall}
-\title{Kicks off the shiny app}
+\title{Kicks off the shiny app on a server}
 \usage{
 runWaterfall()
 }
 \description{
-Kicks off the shiny app
+Kicks off the shiny app on a server
 }

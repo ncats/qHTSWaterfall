@@ -1,4 +1,14 @@
-#' Runs the qHTSWaterfall Shiny Application User Interface
+##################################################
+## Project: qHTSWaterfall
+## Script purpose: Server file for qHTSWaterfall
+## Date: 5/15/2022
+## Authors: Bryan Queme, John Braisted
+## Institute: National Center for Advancing Translational Sciences, NCATS
+## National Institutes of Health
+##################################################
+
+
+#' Runs the qHTSWaterfall Shiny Application User Interface locally
 #' @examples
 #' \dontrun{
 #' library(qHTSWaterfall)
@@ -14,7 +24,7 @@ runQHTSWaterfallApp <- function() {
 }
 
 
-#' Kicks off the shiny app
+#' Kicks off the shiny app on a server
 #'
 #' @export
 runWaterfall <- function() {

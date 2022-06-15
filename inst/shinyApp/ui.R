@@ -1,5 +1,12 @@
-# library(shiny)
-# library(shinyjs)
+##################################################
+## Project: qHTSWaterfall
+## Script purpose: UI file for qHTSWaterfall
+## Date: 5/15/2022
+## Authors: John Braisted
+## Institute: National Center for Advancing Translational Sciences, NCATS
+## National Institutes of Health
+##################################################
+
 
 addPlotCustomizationUI <- function() {
 
@@ -166,7 +173,7 @@ shinyUI(
            id = "mainPanel",
            h3("Plot Preview"),
            actionButton(inputId = 'plotRefreshBtn', label = 'Plot / Refresh'),
-           actionButton(inputId = 'plotExportBtn', label = 'Export Plot'),
+           #actionButton(inputId = 'plotExportBtn', label = 'Export Plot'),
            div(
              id = "mainPlotDiv",
              shinycssloaders::withSpinner(plotly::plotlyOutput(outputId = "mainPlot",

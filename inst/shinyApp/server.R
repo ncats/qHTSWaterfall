@@ -1,5 +1,11 @@
-# library(shiny)
-# library(shinyjs)
+##################################################
+## Project: qHTSWaterfall
+## Script purpose: Server file for qHTSWaterfall
+## Date: 5/15/2022
+## Authors: John Braisted
+## Institute: National Center for Advancing Translational Sciences, NCATS
+## National Institutes of Health
+##################################################
 
 # builds ui elements based on input file
 addReadoutSelector <- function(status) {
@@ -25,11 +31,6 @@ addReadoutSelector <- function(status) {
     if(colorNum <= length(defaultColors)) {
       colorVal <- defaultColors[colorNum]
     }
-
-    # write("color in gui init", stderr())
-    # write(colorVal, stderr())
-    # write(colorNum, stderr())
-    # write(length(defaultColors), stderr())
 
     colorNum = colorNum + 1
 
@@ -96,6 +97,18 @@ addReadoutSelector <- function(status) {
                                                 )
                       ))
                   ),
+                  div(id = 'axis-font-div',
+                    selectInput(
+                    inputId = 'axis_label_font_size',
+                    label = 'Axis Label Font Size',
+                    choices = c(11, 12, 13, 14, 15),
+                    selected = 13,
+                    multiple = FALSE,
+                    selectize = TRUE,
+                    width = NULL,
+                    size = NULL
+                  ))
+                  ,
                   checkboxInput(inputId = "show_curve_index_checkbox", label="Show Curve Number Axis Labels", value=T)
   )
 
@@ -138,16 +151,7 @@ collectParameters <- function(input, output, status) {
 
   readouts <- input$readoutCollection
   readabouts <- input$readoutCollection
-  print("readabouts")
-  print(readabouts)
-  print(readouts)
-  print(str(readouts))
-  print(str(input))
   readouts <- gsub('-readout-checkbox', "", readouts)
-
-  # print("collect params ro-collection and then readouts:")
-  # print(input$readoutCollection)
-  # print(readouts)
 
   idReadouts <- gsub(" ", "-", readouts)
 
@@ -207,6 +211,8 @@ collectParameters <- function(input, output, status) {
     concAxisConfig <- list(min=input$conc_min, max=input$conc_max,
                            tickSizeVal=input$conc_tick_width, firstTick=input$conc_first_tick)
 
+    # axis font
+    axisFontSize <- input$axis_label_font_size
 
     # show curve number scale?
     showCurveNumberLabels <- input$show_curve_index_checkbox
@@ -235,7 +241,8 @@ collectParameters <- function(input, output, status) {
                   gridColor = gridColor,
                   showCurveNumberLabels = showCurveNumberLabels,
                   concAxisConfig = concAxisConfig,
-                  responseAxisConfig = responseAxisConfig)
+                  responseAxisConfig = responseAxisConfig,
+                  axisFontSize = axisFontSize)
   }
   return(props)
 }
@@ -261,9 +268,6 @@ plotRefresh <- function(input, output, status, newData){
     props <- NULL
   }
 
-  # print("in refresh plot newData????")
-  ## print(newData)
-
   if(!is.null(props)) {
 
     if(!doRefresh)
@@ -288,7 +292,8 @@ plotRefresh <- function(input, output, status, newData){
                                       gridColor = props$gridColor,
                                       showCurveNumberLabels = props$showCurveNumberLabels,
                                       concAxisConfig = props$concAxisConfig,
-                                      responseAxisConfig = props$responseAxisConfig
+                                      responseAxisConfig = props$responseAxisConfig,
+                                      axisFontSize = props$axisFontSize
     )
 
 
@@ -316,7 +321,6 @@ plotRefresh <- function(input, output, status, newData){
 }
 
 sampleDataDialog <- function() {
-  # print("sample data dialog function start")
 
   showModal(
     modalDialog(label="Use Sample Data",
@@ -339,13 +343,9 @@ sampleDataDialog <- function() {
 
 plotSampleData <- function(input, output, sampleData) {
 
-  # print("plotting sample data")
-  # print(sampleData)
-
   if(!is.null(status)) {
     # if the input file represents a file change, remove the UI for readouts, then rebuild
     # removing ui
-    # print("Removing old readout UI elements")
     removeUI(selector='#readout_params', immediate=T)
     status <<- NULL
     newData <<- TRUE
@@ -377,18 +377,6 @@ plotSampleData <- function(input, output, sampleData) {
 }
 
 downloadSampleData <- function(output, sampleDataFile) {
-
-  # print("In download file")
-  # print(sampleDataFile)
-
-  # downloadHandler(
-  #   filename = sampleDataFile,
-  #   content = function(file) {
-  #     file.copy("generic_qhts_data.txt", file)
-  #     ## write.csv(sampleData, file, row.names = FALSE)
-  #   },
-  #   contentType = "text/csv"
-  # )
 
   downloadHandler(
     filename = "generic_qhts_data.xlsx",
@@ -433,7 +421,7 @@ savePlot <- function(p) {
 ####################################
 server <- function(input, output, session) {
 
-  options(shiny.maxRequestSize=30*1024^2)
+  options(shiny.maxRequestSize=100*1024^2)
 
   shinyjs::disable(id='plotRefreshBtn')
   shinyjs::disable(id='plotExportBtn')
@@ -451,40 +439,26 @@ server <- function(input, output, session) {
   # Input file selected, initialize status and build initial plot.................
   observeEvent(input$inputFile, {
 
-    # print("in input file trigger event")
-
     usingSampleData <<- FALSE
 
     if(!is.null(status)) {
       # if the input file represents a file change, remove the UI for readouts, then rebuild
       # removing ui
-      # print("Removing old readout UI elements")
       removeUI(selector='#readout_params', immediate=T)
       status <<- NULL
       newData <<- TRUE
     }
 
-    # print("starting input eval")
-
     status <<- qHTSWaterfall:::evaluateInputFile(input$inputFile$datapath)
 
-    # print("passed input eval")
-
     if(!status$valid) {
-      # print("invalid input dialog...")
       showModal(modalDialog(h4(status$problem),title="File Format Problem"))
       return(NULL)
     }
 
-    # print("# print Status:")
-    # print(status)
-
     if(length(status$readouts) > 0) {
       shinyjs::enable(id='plotRefreshBtn')
 
-      # print("readouts are > 0")
-
-      # coming soon...
       #enable(id='plotExportBtn')
 
       insertUI(ui=tags$div(addReadoutSelector(status)), selector='#inputFile_progress', where='afterEnd', immediate=F)
@@ -513,39 +487,18 @@ server <- function(input, output, session) {
                  newData <<- TRUE
 
                  plotSampleData(input, output, sampleData)
-
-                 # print("hit sample data button")
-                 #sampleDataDialog()
                }
                ,ignoreNULL = TRUE
                )
-
-  # observeEvent(input[["sampleDataDownload"]],
-  #
-  #              )
-
 
   output$sampleDataDownload <- downloadHandler(
      filename = function() {
        "qHTS_Generic_Data_Sample.xlsx"
      },
      content = function(con) {
-       # print("Hey im in download handler... I'm about to copy file...")
        file.copy(downloadSampleData, con)
      }
   )
-
-  # observeEvent(input[["ok_sample_data"]],
-  #              {
-  #                #if(input[["sample_data_radio_btns"]] == 'plot_data') {
-  #                 # usingSampleData <<- TRUE
-  #                 # newData <<- TRUE
-  #                 # plotSampleData(input, output, sampleData)
-  #                #}
-  #                #removeModal()
-  #              },ignoreNULL = TRUE)
-
-
 
 
   # selection made to input checkboxes..................
@@ -613,38 +566,38 @@ server <- function(input, output, session) {
   )
 
   # button hit to export plot..................
-  observeEvent(input$plotExportBtn, {
-    props <- collectParameters(input=input, output=output, status)
-
-    if(is.null(props)) {
-      return()
-    } else {
-
-      p <- qHTSWaterfall::plotWaterfall(inputFile = props$inputFile,
-                                        fileFormat = props$fileFormat,
-                                        activityReadouts = props$activityReadouts,
-                                        logMolarConcVector = props$logMolarConcVector,
-                                        pointColors = props$pointColors,
-                                        curveColors = props$curveColors,
-                                        inactiveColor = props$inactiveColor,
-                                        alpha=1,
-                                        pointSize = props$pointSize,
-                                        lineWeight = props$lineWeight,
-                                        plotInactivePoints = props$plotInactivePoints,
-                                        curveResolution = props$curveResolution,
-                                        plotAspectRatio = props$plotAspectRatio,
-                                        axisTitles = props$axisTitles,
-                                        planeColors = props$planeColors,
-                                        gridColor = props$gridColor,
-                                        showCurveNumberLabels = props$showCurveNumberLabels,
-                                        concAxisConfig = props$concAxisConfig,
-                                        responseAxisConfig = props$responseAxisConfig
-      )
-
-      savePlot(p)
-    }
-  }
-  )
+  # observeEvent(input$plotExportBtn, {
+  #   props <- collectParameters(input=input, output=output, status)
+  #
+  #   if(is.null(props)) {
+  #     return()
+  #   } else {
+  #
+  #     p <- qHTSWaterfall::plotWaterfall(inputFile = props$inputFile,
+  #                                       fileFormat = props$fileFormat,
+  #                                       activityReadouts = props$activityReadouts,
+  #                                       logMolarConcVector = props$logMolarConcVector,
+  #                                       pointColors = props$pointColors,
+  #                                       curveColors = props$curveColors,
+  #                                       inactiveColor = props$inactiveColor,
+  #                                       alpha=1,
+  #                                       pointSize = props$pointSize,
+  #                                       lineWeight = props$lineWeight,
+  #                                       plotInactivePoints = props$plotInactivePoints,
+  #                                       curveResolution = props$curveResolution,
+  #                                       plotAspectRatio = props$plotAspectRatio,
+  #                                       axisTitles = props$axisTitles,
+  #                                       planeColors = props$planeColors,
+  #                                       gridColor = props$gridColor,
+  #                                       showCurveNumberLabels = props$showCurveNumberLabels,
+  #                                       concAxisConfig = props$concAxisConfig,
+  #                                       responseAxisConfig = props$responseAxisConfig
+  #     )
+  #
+  #     savePlot(p)
+  #   }
+  # }
+  # )
 
   # Application closed, stut down gracefully.............
   session$onSessionEnded(function() {
