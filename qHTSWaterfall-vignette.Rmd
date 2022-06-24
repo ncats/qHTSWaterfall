@@ -7,7 +7,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, include=FALSE, cache=FALSE}
+```{r setup, include=FALSE, cache=FALSE, warning=FALSE}
 library(knitr)
 knitr::opts_chunk$set(
 collapse = TRUE,
@@ -17,8 +17,20 @@ comment = "#>"
 )
 ```
 
-```{r, waterfallPlot, webgl=TRUE}
+```{r, waterfallPlot, webgl=TRUE, warning=FALSE}
 library(qHTSWaterfall)
+
+#############
+# Use this method to start the user interface Shiny Application
+#############
+
+# This will allow one to use the user interface and sample data or user input data
+# qHTSWaterfall::runQHTSWaterfallApp()
+
+
+#############
+# Use the code below to use R scripting to produce the Waterfall Plot
+#############
 
 # Specify a comma separateed input file. In this example, one is included as 
 # part of the qHTSPackage. If using your own file, provide the file path here.
@@ -75,9 +87,5 @@ qHTSWaterfall::plotWaterfall(
   responseAxisConfig = responseAxisConfig
 )
 
-```
-```{r}
-# Use this method to start the user interface Shiny Application
-# qHTSWaterfall::runQHTSWaterfallApp()
 ```
 
