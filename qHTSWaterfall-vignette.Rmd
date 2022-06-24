@@ -76,3 +76,8 @@ qHTSWaterfall::plotWaterfall(
 )
 
 ```
+```{r}
+# Use this method to start the user interface Shiny Application
+# qHTSWaterfall::runQHTSWaterfallApp()
+```
+
