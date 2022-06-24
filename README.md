@@ -22,7 +22,7 @@ library(qhtsWaterfall)
 qHTSWaterfall::runQHTSWaterfallApp()
 ```
 ## Vignette Example
-https://ncats.github.io/qhtsWaterfall/qHTSWaterfall-vignette.html
+https://ncats.github.io/qHTSWaterfall/qHTSWaterfall-vignette.html
 
 ## Method Help Page
 
