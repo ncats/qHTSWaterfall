@@ -9,8 +9,6 @@ vignette: >
 
 ```{r setup, include=FALSE, cache=FALSE}
 library(knitr)
-library(rgl)
-rgl::setupKnitr(autoprint = T)
 knitr::opts_chunk$set(
 collapse = TRUE,
 echo = TRUE,
@@ -54,17 +52,27 @@ logConc <- c(
 # Note: The displayed resulting plot shown in this vignette page is a low resolution static image.
 # The method will return a high resolution 3D rendering (from the rgl package) that can be resized
 # and rotated.
+responseAxisConfig = list(min=-115, max=50, tickSizeVal=25, firstTick=-100)
+concAxisConfig = list(min=-9.2, max=-3.9, tickSizeVal=1.0, firstTick=-4)
+planeColors = list(basePlaneColor="#b8b6b6", rightPlaneColor="#999494", leftPlaneColor="#6e6868")
+
 qHTSWaterfall::plotWaterfall(
   inputFile,
-  activityReadouts = c("fluc", "nluc"),
-  logMolarConcVector = logConc,
-  pointColors = c("darkgreen", "royalblue3"),
-  curveColors = c("darkgreen", "royalblue3"),
+  activityReadouts = c("nluc","fluc"),
+  pointColors = c("royalblue3", "darkgreen"),
+  curveColors = c("royalblue3", "darkgreen"),
   inactiveColor = "gray",
-  pointSize = 3,
+  pointSize = 1.0,
   alpha = 1,
   plotInactivePoints = F,
   curveResolution = 250,
-  plotAspectRatio = c(2,2,4)
+  plotAspectRatio = c(1.5,1,3),
+  lineWeight = 1.5,
+  fileFormat = 'ncats_qhts',
+  planeColors = planeColors,
+  showCurveNumberLabels = T,
+  concAxisConfig = concAxisConfig,
+  responseAxisConfig = responseAxisConfig
 )
+
 ```
