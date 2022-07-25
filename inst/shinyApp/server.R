@@ -109,7 +109,28 @@ addReadoutSelector <- function(status) {
                     size = NULL
                   ))
                   ,
-                  checkboxInput(inputId = "show_curve_index_checkbox", label="Show Curve Number Axis Labels", value=T)
+                  checkboxInput(inputId = "show_curve_index_checkbox", label="Show Curve Number Axis Labels", value=T),
+                  div(id = 'export_image_div',
+                      selectInput(inputId = 'export_image_format',
+                                  label = 'Image Export File Format',
+                                  choices = c("png", "jpeg", "svg", "webp"),
+                                  selected = "png",
+                                  multiple = FALSE,
+                                  selectize = TRUE,
+                                  width = NULL,
+                                  size = NULL
+                      ),
+                      selectInput(inputId = 'export_image_scale',
+                              label = 'Image Export Scale',
+                              choices = c(1:8),
+                              selected = 4,
+                              multiple = FALSE,
+                              selectize = TRUE,
+                              width = NULL,
+                              size = NULL
+                  )
+                  )
+
   )
 
   readoutDiv <- div(
@@ -223,6 +244,9 @@ collectParameters <- function(input, output, status) {
     axisTitles[['respTitle']] <- input$response_axis_title
     axisTitles[['curveTitle']] <- "Compound"
 
+    exportFileScale = input$export_image_scale
+    exportFileFormat = input$export_image_format
+
     props <- list(inputFile = inputFile,
                   fileFormat = status$fileFormat,
                   activityReadouts = readouts,
@@ -242,7 +266,9 @@ collectParameters <- function(input, output, status) {
                   showCurveNumberLabels = showCurveNumberLabels,
                   concAxisConfig = concAxisConfig,
                   responseAxisConfig = responseAxisConfig,
-                  axisFontSize = axisFontSize)
+                  axisFontSize = axisFontSize,
+                  exportFileFormat = exportFileFormat,
+                  exportFileScale = exportFileScale)
   }
   return(props)
 }
@@ -293,8 +319,10 @@ plotRefresh <- function(input, output, status, newData){
                                       showCurveNumberLabels = props$showCurveNumberLabels,
                                       concAxisConfig = props$concAxisConfig,
                                       responseAxisConfig = props$responseAxisConfig,
-                                      axisFontSize = props$axisFontSize
-    )
+                                      axisFontSize = props$axisFontSize,
+                                      plotExportScale = as.integer(props$exportFileScale),
+                                      plotExportFileType = props$exportFileFormat
+                                      )
 
 
   }  else if(newData) {
@@ -563,6 +591,18 @@ server <- function(input, output, session) {
     newData <<- FALSE
     plotRefresh(input, output, status, FALSE)
   }
+  )
+
+  observeEvent(input$export_image_format, {
+                newData <<- FALSE
+                plotRefresh(input, output, status, FALSE)
+  }, ignoreInit = TRUE
+  )
+
+  observeEvent(input$export_image_scale, {
+    newData <<- FALSE
+    plotRefresh(input, output, status, FALSE)
+  }, ignoreInit = TRUE
   )
 
   # button hit to export plot..................

@@ -51,6 +51,8 @@ f <- function(params, concs, interleave=TRUE, curveRes) {
 #' @param concAxisConfig a list with 4 named values: min, max, tickWidth, firstTick.
 #' @param responseAxisConfig a list with 4 named values: min, max, tickWidth, firstTick.
 #' @param axisFontSize an integer specifying the font size for axis titles and tick labels. Default = 13, best size range tends to be from 11 to 15.
+#' @param plotExportScale determines the export file size, higher results in increased relative resolution (range: 1-8), default is 4, 7 will give a result that is roughly 10MB
+#' @param plotExportFileFormat default is png, other options include svg, jpeg or webp.
 #' @importFrom utils read.csv
 #' @import plotly
 #' @import stringr
@@ -102,7 +104,8 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
                           plotAspectRatio=c(1,1,3), antialiasSmoothing = F,
                           axisTitles = list(concTitle="log2[conc], M", respTitle="Response", curveTitle="Compound"),
                           planeColors = list(basePlaneColor="#b8b6b6", rightPlaneColor="#999494", leftPlaneColor="#6e6868"),
-                          gridColor = "#ffffff", showCurveNumberLabels = TRUE, concAxisConfig = NULL, responseAxisConfig = NULL, axisFontSize=13) {
+                          gridColor = "#ffffff", showCurveNumberLabels = TRUE, concAxisConfig = NULL, responseAxisConfig = NULL, axisFontSize=13,
+                          plotExportScale=4, plotExportFileType = 'png') {
 
   if(fileFormat == 'ncats_qhts') {
     generic_data <- 0
@@ -123,6 +126,19 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   plotPoints = T
   if(pointSize == 0) {
     plotPoints = F
+  }
+
+  validExportFormats = c('jpeg', 'png', 'svg', 'webp')
+  if(! plotExportFileType %in% validExportFormats) {
+    plotExportFileType = 'png'
+  }
+
+  plotExportScale <- floor(plotExportScale)
+
+  if(plotExportScale < 1) {
+    plotExportScale = 1
+  } else if(plotExportScale > 8) {
+    plotExportScale = 8
   }
 
   #activity readouts, should have an equal or greater numbrer of point and curve colors
@@ -648,6 +664,14 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
 
   p <- p %>% plotly::layout(scene = list(aspectratio = aspect, xaxis=axx, yaxis=axy, zaxis=axz, camera = list(eye = list(x = 2.25, y = 2.25, z = 0.3)), margin=list(autoexpand = T), hovermode=FALSE), font=f)
 
+  p <- p %>%
+    config(
+      toImageButtonOptions = list(
+        format = plotExportFileType,
+        filename = "saved_plot",
+        scale=plotExportScale
+      )
+    )
 
   return(p)
 }
