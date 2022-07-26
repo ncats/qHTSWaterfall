@@ -52,7 +52,7 @@ f <- function(params, concs, interleave=TRUE, curveRes) {
 #' @param responseAxisConfig a list with 4 named values: min, max, tickWidth, firstTick.
 #' @param axisFontSize an integer specifying the font size for axis titles and tick labels. Default = 13, best size range tends to be from 11 to 15.
 #' @param plotExportScale determines the export file size, higher results in increased relative resolution (range: 1-8), default is 4, 7 will give a result that is roughly 10MB
-#' @param plotExportFileFormat default is png, other options include svg, jpeg or webp.
+#' @param plotExportFileType default is png, other options include svg, jpeg or webp.
 #' @importFrom utils read.csv
 #' @import plotly
 #' @import stringr

@@ -457,6 +457,8 @@ server <- function(input, output, session) {
   status <<- NULL
   usingSampleData <<- FALSE
   newData <<- TRUE
+  exportScale <<- 4
+  exportType <<- 'png'
 
   sampleData <<- system.file("extdata", "Generic_qHTS_Format_Example.csv", package="qHTSWaterfall")
   downloadSampleData <<- system.file("extdata", "Generic_qHTS_Format_Example.xlsx", package="qHTSWaterfall")
@@ -593,16 +595,42 @@ server <- function(input, output, session) {
   }
   )
 
-  observeEvent(input$export_image_format, {
-                newData <<- FALSE
-                plotRefresh(input, output, status, FALSE)
-  }, ignoreInit = TRUE
+
+  observeEvent(input[['export_image_format']], {
+
+    # if dynamic addition... check for null input
+    if(is.null(input[['export_image_format']])) {
+      return()
+    }
+
+    val <- input[['export_image_format']]
+
+    # only update on changed values...
+    if(val != exportType) {
+      exportType <<- val
+      newData <<- FALSE
+      plotRefresh(input, output, status, FALSE)
+    }
+  }, ignoreInit = TRUE, ignoreNULL = TRUE
   )
 
-  observeEvent(input$export_image_scale, {
-    newData <<- FALSE
-    plotRefresh(input, output, status, FALSE)
-  }, ignoreInit = TRUE
+
+  observeEvent(input[['export_image_scale']], {
+
+    # if dynamic addition... check for null input
+    if(is.null(input[['export_image_scale']])) {
+      return()
+    }
+
+    val <- input[['export_image_scale']]
+
+    # only update on changed values...
+    if(val != exportScale) {
+      exportScale <<- val
+      newData <<- FALSE
+      plotRefresh(input, output, status, FALSE)
+    }
+  }, ignoreInit = TRUE, ignoreNULL = TRUE
   )
 
   # button hit to export plot..................
