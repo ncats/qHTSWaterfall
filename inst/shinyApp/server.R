@@ -109,7 +109,28 @@ addReadoutSelector <- function(status) {
                     size = NULL
                   ))
                   ,
-                  checkboxInput(inputId = "show_curve_index_checkbox", label="Show Curve Number Axis Labels", value=T)
+                  checkboxInput(inputId = "show_curve_index_checkbox", label="Show Curve Number Axis Labels", value=T),
+                  div(id = 'export_image_div',
+                      selectInput(inputId = 'export_image_format',
+                                  label = 'Image Export File Format',
+                                  choices = c("png", "jpeg", "svg", "webp"),
+                                  selected = "png",
+                                  multiple = FALSE,
+                                  selectize = TRUE,
+                                  width = NULL,
+                                  size = NULL
+                      ),
+                      selectInput(inputId = 'export_image_scale',
+                              label = 'Image Export Scale',
+                              choices = c(1:8),
+                              selected = 4,
+                              multiple = FALSE,
+                              selectize = TRUE,
+                              width = NULL,
+                              size = NULL
+                  )
+                  )
+
   )
 
   readoutDiv <- div(
@@ -223,6 +244,9 @@ collectParameters <- function(input, output, status) {
     axisTitles[['respTitle']] <- input$response_axis_title
     axisTitles[['curveTitle']] <- "Compound"
 
+    exportFileScale = input$export_image_scale
+    exportFileFormat = input$export_image_format
+
     props <- list(inputFile = inputFile,
                   fileFormat = status$fileFormat,
                   activityReadouts = readouts,
@@ -242,7 +266,9 @@ collectParameters <- function(input, output, status) {
                   showCurveNumberLabels = showCurveNumberLabels,
                   concAxisConfig = concAxisConfig,
                   responseAxisConfig = responseAxisConfig,
-                  axisFontSize = axisFontSize)
+                  axisFontSize = axisFontSize,
+                  exportFileFormat = exportFileFormat,
+                  exportFileScale = exportFileScale)
   }
   return(props)
 }
@@ -293,8 +319,10 @@ plotRefresh <- function(input, output, status, newData){
                                       showCurveNumberLabels = props$showCurveNumberLabels,
                                       concAxisConfig = props$concAxisConfig,
                                       responseAxisConfig = props$responseAxisConfig,
-                                      axisFontSize = props$axisFontSize
-    )
+                                      axisFontSize = props$axisFontSize,
+                                      plotExportScale = as.integer(props$exportFileScale),
+                                      plotExportFileType = props$exportFileFormat
+                                      )
 
 
   }  else if(newData) {
@@ -429,6 +457,8 @@ server <- function(input, output, session) {
   status <<- NULL
   usingSampleData <<- FALSE
   newData <<- TRUE
+  exportScale <<- 4
+  exportType <<- 'png'
 
   sampleData <<- system.file("extdata", "Generic_qHTS_Format_Example.csv", package="qHTSWaterfall")
   downloadSampleData <<- system.file("extdata", "Generic_qHTS_Format_Example.xlsx", package="qHTSWaterfall")
@@ -563,6 +593,44 @@ server <- function(input, output, session) {
     newData <<- FALSE
     plotRefresh(input, output, status, FALSE)
   }
+  )
+
+
+  observeEvent(input[['export_image_format']], {
+
+    # if dynamic addition... check for null input
+    if(is.null(input[['export_image_format']])) {
+      return()
+    }
+
+    val <- input[['export_image_format']]
+
+    # only update on changed values...
+    if(val != exportType) {
+      exportType <<- val
+      newData <<- FALSE
+      plotRefresh(input, output, status, FALSE)
+    }
+  }, ignoreInit = TRUE, ignoreNULL = TRUE
+  )
+
+
+  observeEvent(input[['export_image_scale']], {
+
+    # if dynamic addition... check for null input
+    if(is.null(input[['export_image_scale']])) {
+      return()
+    }
+
+    val <- input[['export_image_scale']]
+
+    # only update on changed values...
+    if(val != exportScale) {
+      exportScale <<- val
+      newData <<- FALSE
+      plotRefresh(input, output, status, FALSE)
+    }
+  }, ignoreInit = TRUE, ignoreNULL = TRUE
   )
 
   # button hit to export plot..................

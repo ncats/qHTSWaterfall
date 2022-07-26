@@ -27,7 +27,9 @@ plotWaterfall(
   showCurveNumberLabels = TRUE,
   concAxisConfig = NULL,
   responseAxisConfig = NULL,
-  axisFontSize = 13
+  axisFontSize = 13,
+  plotExportScale = 4,
+  plotExportFileType = "png"
 )
 }
 \arguments{
@@ -76,6 +78,10 @@ Input as list, derault: c(1, 1, 3)}
 \item{responseAxisConfig}{a list with 4 named values: min, max, tickWidth, firstTick.}
 
 \item{axisFontSize}{an integer specifying the font size for axis titles and tick labels. Default = 13, best size range tends to be from 11 to 15.}
+
+\item{plotExportScale}{determines the export file size, higher results in increased relative resolution (range: 1-8), default is 4, 7 will give a result that is roughly 10MB}
+
+\item{plotExportFileType}{default is png, other options include svg, jpeg or webp.}
 }
 \description{
 Plots 3D qHTS waterfall plot, given Pubchem activity file or NCATS qHTS format file.
