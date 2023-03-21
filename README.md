@@ -18,10 +18,11 @@ install_github("ncats/qhtsWaterfall")
 # Load the qhtsWaterfall package
 library(qhtsWaterfall)
 
-# See vignette example code below...
+# Use this method to start the user interface Shiny Application
+qHTSWaterfall::runQHTSWaterfallApp()
 ```
 ## Vignette Example
-https://ncats.github.io/qhtsWaterfall/qHTSWaterfall-vignette.html
+https://ncats.github.io/qHTSWaterfall/qHTSWaterfall-vignette.html
 
 ## Method Help Page
 
