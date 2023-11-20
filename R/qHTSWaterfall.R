@@ -1,7 +1,6 @@
 ##################################################
 ## Project: qHTSWaterfall
 ## Script purpose: Plotting engine for qHTSWaterfall App
-## Date: 5/15/2022
 ## Authors: Bryan Queme, John Braisted
 ## Institute: National Center for Advancing Translational Sciences, NCATS
 ## National Institutes of Health
@@ -141,6 +140,12 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     plotExportScale = 8
   }
 
+  print("In method, readouts = ")
+  for(r in activityReadouts) {
+    print(paste0("**|",r,"|**"))
+  }
+  print(activityReadouts)
+
   #activity readouts, should have an equal or greater numbrer of point and curve colors
 
   if(curveResolution < 25) {
@@ -172,12 +177,19 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   pointColors <- c(pointColors, inactiveColor)
   lineColors <- c(curveColors, inactiveColor)
 
+  print(pointColors)
+  print(lineColors)
+
   # read data file (header line 2 and body) ----------------------------
   if(tolower(fileExt)  == 'csv') {
     cdata <- read.csv(inputFile, header=TRUE, skip=1, na.strings=c("NA","","NAN","NaN","N/A"))
   } else {
+    print("reading excel file", )
     cdata <- openxlsx::read.xlsx(inputFile, sheet=1, startRow=2)
   }
+
+  print("have cdata, sheet 1, start row 2...")
+  print(dim(cdata))
 
   # removed completely empty rows
   cdata <- cdata[rowSums(is.na(cdata)) != ncol(cdata),]
@@ -202,7 +214,7 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
     compId <- "Sample.ID"
     fit <- "Fit_Output"
     readout <- "Sample.Data.Type"
-    lac50 <- "Log.AC50..M."
+    lac50 <- "Log.AC50.(M)"
     hill <- "Hill.Coef"
     inf <- "Inf.Activity"
     zero <- "Zero.Activity"
@@ -213,8 +225,10 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   minConc <- list()
   maxConc <- list()
 
+print(heads)
 
-
+print("in function,readouts...")
+print(activityReadouts)
   # for now, apply the single logMolarConcVector to all readouts
   concValues <- list()
   for(currReadout in activityReadouts) {
@@ -662,7 +676,12 @@ plotWaterfall <- function(inputFile, fileFormat='generic_qhts', activityReadouts
   }
 
 
-  p <- p %>% plotly::layout(scene = list(aspectratio = aspect, xaxis=axx, yaxis=axy, zaxis=axz, camera = list(eye = list(x = 2.25, y = 2.25, z = 0.3)), margin=list(autoexpand = T), hovermode=FALSE), font=f)
+  p <- p %>% plotly::layout(scene = list(aspectratio = aspect, xaxis=axx, yaxis=axy, zaxis=axz,
+                                         camera = list(eye = list(x = 2.25, y = 2.25, z = 0.3)),
+                                         margin=list(autoexpand = T), hovermode=FALSE), font=f,
+                            plot_bgcolor  = "rgba(0, 0, 0, 0)",
+                            paper_bgcolor = "rgba(0, 0, 0, 0)"
+                            )
 
   p <- p %>%
     config(
@@ -693,6 +712,7 @@ evaluateInputFile <- function(filePath) {
     formatConcHeader <- unlist(head[1,])
     primaryHeader <- unlist(head[2,])
   } else {
+    print("eval xlsx")
     header <- openxlsx::read.xlsx(filePath, sheet=1, colNames=F, rows = as.numeric(c(1,2)))
     formatConcHeader <- as.character(header[1,])
     primaryHeader <- as.character(header[2,])
@@ -703,7 +723,7 @@ evaluateInputFile <- function(filePath) {
   }
 
   # error checking
-
+  print("Verifying header...")
   if(!is.null(formatConcHeader) && length(formatConcHeader) > 3) {
     formatTag <- formatConcHeader[1]
     status$fileFormat <- formatConcHeader[2]
@@ -732,6 +752,9 @@ evaluateInputFile <- function(filePath) {
 
     # now we need to determine if we have the required primary header fields for the format
     validHeader <- validatePrimaryHeader(status$fileFormat, primaryHeader)
+
+    print("validated primary header")
+    print(validHeader)
     if(typeof(validHeader) != 'logical') {
       status$valid <- FALSE
       s <- ""
@@ -743,6 +766,7 @@ evaluateInputFile <- function(filePath) {
       return(status)
     }
 
+    print("have logical header validation")
 
   } else {
     status$valid <- FALSE
@@ -753,19 +777,25 @@ evaluateInputFile <- function(filePath) {
 
   # Error checking done
 
+
   # get log conc vals
     haveLogConcTag <- FALSE
     concVector <- c()
+    print(formatConcHeader)
+
     for(header in formatConcHeader) {
+      print(header)
       if(haveLogConcTag) {
 
         conc <- as.numeric(header)
 
+        print(conc)
         if(!is.na(conc)) {
           concVector <- c(concVector, conc)
         }
       }
-      if(tolower(header) == 'log_conc_m') {
+      if(!is.na(header) & tolower(header) == 'log_conc_m') {
+        print("have conc tag....")
         haveLogConcTag = TRUE
       }
     }
@@ -773,6 +803,8 @@ evaluateInputFile <- function(filePath) {
 
   status$logConc <- concVector
   status$concLength <- length(concVector)
+
+  print("getting conc limit pre-set guesses")
 
   # capture optimal initial concRange
   minConc <- min(concVector)
@@ -793,12 +825,15 @@ evaluateInputFile <- function(filePath) {
   status$maxConc <- maxConcRange
 
 
+  print("have min max conc range")
 
   # set reasonable bounds for the range min and max
   respLimits <- evalDataRange(filePath, concVector)
   status$minResp <- respLimits[1]
   status$maxResp <- respLimits[2]
   # skip the first header and read table
+
+  print("Finished eval data range...")
 
   if(tolower(fileExt)  == 'csv') {
     cdata <- read.csv(filePath, header=TRUE, skip=1, na.strings=c("NA","","NAN","NaN","N/A"))
@@ -818,6 +853,9 @@ evaluateInputFile <- function(filePath) {
 
     readoutCol <- heads[grep(readoutColName, heads, ignore.case = T)]
 
+    print("Have the readout column?")
+    print(readoutCol)
+
     if(!is.null(readoutCol) && length(readoutCol > 0)) {
        readouts <- unique(cdata[[readoutCol]])
        status$readouts <- readouts
@@ -836,6 +874,8 @@ evaluateInputFile <- function(filePath) {
 
     status$defaultColors <- defaultColors[1:length(readouts)]
 
+    print("finished xlsx evaluation...")
+
   return(status)
 }
 
@@ -853,13 +893,26 @@ evalDataRange <- function(filePath, conc) {
 
   dataCols <- c()
 
+  print("in eval data range...")
+
   for(i in 1:length(conc)){
     dataCols <- c(dataCols, paste("Data",(i-1), sep=""))
   }
 
+  print("dataCols:")
+  print(dataCols)
+  print("Conc:")
+  print(conc)
+  print(filePath)
+
   responseData <- as.matrix(cdata[,dataCols[length(dataCols)]])
+  #responseData <- as.matrix(cdata[,dataCols])
   rangeQuantiles <- quantile(responseData, probs <- c(0.01, 0.99), na.rm=T)
+  print(rangeQuantiles)
   lowerLimit <- rangeQuantiles[[1]]
+
+  print(conc)
+
   if(lowerLimit < 0) {
     lowerLimit <- ceiling(lowerLimit)
   } else {
@@ -973,6 +1026,7 @@ validatePrimaryHeader <- function(fileFormat, primaryHeader) {
 
   missingFields <- c()
   for(field in fieldList) {
+    print(field)
     if(!(field %in% primaryHeader)) {
       missingFields <- c(missingFields, field)
     }

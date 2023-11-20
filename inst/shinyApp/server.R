@@ -32,6 +32,10 @@ addReadoutSelector <- function(status) {
       colorVal <- defaultColors[colorNum]
     }
 
+    print("Setting up readout ui")
+    print(readout)
+    print(colorVal)
+
     colorNum = colorNum + 1
 
 
