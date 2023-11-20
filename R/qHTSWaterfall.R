@@ -794,7 +794,7 @@ evaluateInputFile <- function(filePath) {
           concVector <- c(concVector, conc)
         }
       }
-      if(!is.na(header) & tolower(header) == 'log_conc_m') {
+      if(!is.na(header) && tolower(header) == 'log_conc_m') {
         print("have conc tag....")
         haveLogConcTag = TRUE
       }
@@ -990,7 +990,7 @@ extractConcFromFile <- function(inputFile) {
         concVector <- c(concVector, conc)
       }
     }
-    if(tolower(header) == 'log_conc_m') {
+    if(!is.na(header) && tolower(header) == 'log_conc_m') {
       haveLogConcTag = TRUE
     }
   }
